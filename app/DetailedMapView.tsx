@@ -15,16 +15,16 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat';
-import { FaGasPump, FaStar, FaCar, FaShoppingCart, FaCoffee } from 'react-icons/fa';
 
 // Fix leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-  iconUrl: require('leaflet/dist/images/marker-icon.png'),
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
-});
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
+    iconUrl: '/leaflet/images/marker-icon.png',
+    shadowUrl: '/leaflet/images/marker-shadow.png',
+  });
+}
 
 interface GasStation {
   id: string;
@@ -141,7 +141,6 @@ const createUserLocationIcon = (isCurrent: boolean = true) => {
       align-items: center;
       justify-content: center;
       position: relative;
-      animation: pulse 2s infinite;
     ">
       <div style="
         width: 12px;
@@ -149,32 +148,8 @@ const createUserLocationIcon = (isCurrent: boolean = true) => {
         background: white;
         border-radius: 50%;
       "></div>
-      <div style="
-        position: absolute;
-        top: -4px;
-        left: -4px;
-        right: -4px;
-        bottom: -4px;
-        border: 2px solid ${color}44;
-        border-radius: 50%;
-        animation: ripple 2s infinite;
-      "></div>
     </div>
   `;
-
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes ripple {
-      0% { transform: scale(1); opacity: 1; }
-      100% { transform: scale(2); opacity: 0; }
-    }
-  `;
-  document.head.appendChild(style);
 
   return L.divIcon({
     className: 'user-marker',
@@ -182,6 +157,33 @@ const createUserLocationIcon = (isCurrent: boolean = true) => {
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2]
   });
+};
+
+// Price gradient circle for heatmap-like visualization
+const PriceGradientCircle: React.FC<{ 
+  station: GasStation;
+  fuelType: 'diesel' | 'e5' | 'e10';
+}> = ({ station, fuelType }) => {
+  const price = station[fuelType];
+  const radius = Math.max(30, Math.min(150, (2.0 - price) * 100)); // Adjust radius based on price
+  
+  let color = '#10B981'; // Green for cheap
+  if (price > 1.5) color = '#EF4444'; // Red for expensive
+  else if (price > 1.3) color = '#F59E0B'; // Orange for medium
+
+  return (
+    <Circle
+      center={[station.lat, station.lng]}
+      radius={radius}
+      pathOptions={{
+        fillColor: color,
+        color: color,
+        fillOpacity: 0.1,
+        weight: 1,
+        opacity: 0.5
+      }}
+    />
+  );
 };
 
 // Zoom tracker component
@@ -199,36 +201,141 @@ const ZoomTracker: React.FC<{ onZoomChange: (zoom: number) => void }> = ({ onZoo
   return null;
 };
 
-// Heatmap layer component
-const HeatmapLayer: React.FC<{ stations: GasStation[], fuelType: 'diesel' | 'e5' | 'e10' }> = ({ stations, fuelType }) => {
+// Cluster visualization component
+const StationClusters: React.FC<{ stations: GasStation[] }> = ({ stations }) => {
   const map = useMap();
   
+  // Group stations by location clusters
   useEffect(() => {
-    if ((window as any).L && (window as any).L.heatLayer) {
-      const heatData = stations.map(station => [
-        station.lat,
-        station.lng,
-        Math.max(0.1, 1 - ((station[fuelType] as number) / 2))
-      ]);
-      
-      const heatLayer = (window as any).L.heatLayer(heatData, {
-        radius: 25,
-        blur: 15,
-        maxZoom: 17,
-        gradient: {
-          0.1: '#00FF00',
-          0.5: '#FFFF00',
-          1.0: '#FF0000'
-        }
-      }).addTo(map);
+    const clusters = new Map<string, GasStation[]>();
+    
+    stations.forEach(station => {
+      // Round coordinates to 3 decimal places for clustering
+      const key = `${station.lat.toFixed(3)},${station.lng.toFixed(3)}`;
+      if (!clusters.has(key)) {
+        clusters.set(key, []);
+      }
+      clusters.get(key)?.push(station);
+    });
 
-      return () => {
-        map.removeLayer(heatLayer);
-      };
-    }
-  }, [stations, fuelType, map]);
+    // Create cluster markers
+    const clusterMarkers: L.Marker[] = [];
+    clusters.forEach((clusterStations, key) => {
+      if (clusterStations.length > 1) {
+        const [lat, lng] = key.split(',').map(Number);
+        const avgPrice = clusterStations.reduce((sum, s) => sum + s.diesel, 0) / clusterStations.length;
+        
+        const clusterSize = Math.min(60, 30 + clusterStations.length * 5);
+        const color = avgPrice > 1.5 ? '#EF4444' : avgPrice > 1.3 ? '#F59E0B' : '#10B981';
+        
+        const icon = L.divIcon({
+          className: 'cluster-marker',
+          html: `
+            <div style="
+              width: ${clusterSize}px;
+              height: ${clusterSize}px;
+              background: ${color};
+              border: 3px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: bold;
+              font-size: ${clusterSize * 0.3}px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            ">
+              ${clusterStations.length}
+            </div>
+          `,
+          iconSize: [clusterSize, clusterSize],
+          iconAnchor: [clusterSize / 2, clusterSize / 2]
+        });
+
+        const marker = L.marker([lat, lng], { icon }).addTo(map);
+        clusterMarkers.push(marker);
+      }
+    });
+
+    return () => {
+      clusterMarkers.forEach(marker => map.removeLayer(marker));
+    };
+  }, [stations, map]);
 
   return null;
+};
+
+// Custom control for map
+const CustomControls: React.FC<{
+  showPriceCircles: boolean;
+  setShowPriceCircles: (show: boolean) => void;
+  priceCircleType: 'diesel' | 'e5' | 'e10';
+  setPriceCircleType: (type: 'diesel' | 'e5' | 'e10') => void;
+  showClusters: boolean;
+  setShowClusters: (show: boolean) => void;
+  onRecenter: () => void;
+}> = ({ 
+  showPriceCircles, 
+  setShowPriceCircles, 
+  priceCircleType, 
+  setPriceCircleType,
+  showClusters,
+  setShowClusters,
+  onRecenter
+}) => {
+  return (
+    <div className="leaflet-top leaflet-right">
+      <div className="leaflet-control leaflet-bar custom-controls">
+        <div className="control-group">
+          <button 
+            className={`control-btn ${showPriceCircles ? 'active' : ''}`}
+            onClick={() => setShowPriceCircles(!showPriceCircles)}
+            title="Price Visualization"
+          >
+            💵
+          </button>
+          {showPriceCircles && (
+            <div className="control-dropdown">
+              <button 
+                className={`dropdown-btn ${priceCircleType === 'diesel' ? 'active' : ''}`}
+                onClick={() => setPriceCircleType('diesel')}
+              >
+                Diesel
+              </button>
+              <button 
+                className={`dropdown-btn ${priceCircleType === 'e5' ? 'active' : ''}`}
+                onClick={() => setPriceCircleType('e5')}
+              >
+                E5
+              </button>
+              <button 
+                className={`dropdown-btn ${priceCircleType === 'e10' ? 'active' : ''}`}
+                onClick={() => setPriceCircleType('e10')}
+              >
+                E10
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <button 
+          className={`control-btn ${showClusters ? 'active' : ''}`}
+          onClick={() => setShowClusters(!showClusters)}
+          title="Show Clusters"
+        >
+          👥
+        </button>
+        
+        <button 
+          className="control-btn"
+          onClick={onRecenter}
+          title="Recenter Map"
+        >
+          ↻
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const DetailedMapView: React.FC<DetailedMapViewProps> = ({
@@ -242,8 +349,10 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
   onZoomChange
 }) => {
   const mapRef = useRef<L.Map>(null);
-  const [showHeatmap, setShowHeatmap] = useState(false);
-  const [heatmapType, setHeatmapType] = useState<'diesel' | 'e5' | 'e10'>('diesel');
+  const [showPriceCircles, setShowPriceCircles] = useState(false);
+  const [priceCircleType, setPriceCircleType] = useState<'diesel' | 'e5' | 'e10'>('diesel');
+  const [showClusters, setShowClusters] = useState(false);
+  const [currentZoom, setCurrentZoom] = useState(13);
 
   // Calculate center
   const getCenter = (): [number, number] => {
@@ -282,23 +391,40 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
     }
   };
 
-  // Get station amenities icons
-  const getAmenityIcons = (amenities?: string[]) => {
-    if (!amenities) return [];
-    return amenities.map(amenity => {
-      switch (amenity.toLowerCase()) {
-        case 'car wash':
-          return <FaCar key={amenity} className="amenity-icon" title="Car Wash" />;
-        case 'shop':
-          return <FaShoppingCart key={amenity} className="amenity-icon" title="Shop" />;
-        case '24/7':
-          return <FaGasPump key={amenity} className="amenity-icon" title="24/7" />;
-        case 'cafe':
-          return <FaCoffee key={amenity} className="amenity-icon" title="Cafe" />;
-        default:
-          return null;
-      }
-    }).filter(Boolean);
+  // Handle station click
+  const handleStationClick = (station: GasStation) => {
+    onStationSelect(station);
+    if (mapRef.current) {
+      mapRef.current.setView([station.lat, station.lng], Math.max(currentZoom, 15));
+    }
+  };
+
+  // Handle recenter
+  const handleRecenter = () => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.setView([userLocation.lat, userLocation.lng], 13);
+    } else if (stations.length > 0 && mapRef.current) {
+      const center = getCenter();
+      mapRef.current.setView(center, 13);
+    }
+  };
+
+  // Handle zoom change
+  const handleZoomChange = (zoom: number) => {
+    setCurrentZoom(zoom);
+    onZoomChange(zoom);
+  };
+
+  // Get amenity icon
+  const getAmenityIcon = (amenity: string) => {
+    switch (amenity.toLowerCase()) {
+      case 'car wash': return '🚗';
+      case 'shop': return '🛒';
+      case '24/7': return '⏰';
+      case 'cafe': return '☕';
+      case 'atm': return '🏧';
+      default: return '✅';
+    }
   };
 
   return (
@@ -344,8 +470,17 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
           />
         )}
 
-        {/* Heatmap overlay */}
-        {showHeatmap && <HeatmapLayer stations={stations} fuelType={heatmapType} />}
+        {/* Price gradient circles */}
+        {showPriceCircles && stations.map(station => (
+          <PriceGradientCircle
+            key={`circle-${station.id}`}
+            station={station}
+            fuelType={priceCircleType}
+          />
+        ))}
+
+        {/* Station clusters */}
+        {showClusters && <StationClusters stations={stations} />}
 
         {/* User location */}
         {userLocation && (
@@ -379,87 +514,90 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
         )}
 
         {/* Stations */}
-        {stations.map(station => {
-          const amenities = getAmenityIcons(station.amenities);
-          return (
-            <Marker
-              key={station.id}
-              position={[station.lat, station.lng]}
-              icon={createStationIcon(station.brand, station.isOpen, selectedStation?.id === station.id, station.rating)}
-              eventHandlers={{
-                click: () => {
-                  onStationSelect(station);
-                  if (mapRef.current) {
-                    mapRef.current.setView([station.lat, station.lng], 16);
-                  }
-                },
-              }}
-            >
-              <Popup className="station-popup">
-                <div className="popup-content">
-                  <div className="popup-header">
-                    <h4 className="station-name">{station.name}</h4>
-                    <div className={`status-badge ${station.isOpen ? 'open' : 'closed'}`}>
-                      {station.isOpen ? 'Open' : 'Closed'}
-                    </div>
-                  </div>
-                  
-                  <div className="popup-brand">{station.brand}</div>
-                  
-                  <div className="popup-location">
-                    <FaMapMarkerAlt className="icon" />
-                    {station.street} {station.houseNumber}, {station.place}
-                  </div>
-                  
-                  <div className="popup-distance">
-                    <FaStar className="icon" />
-                    {station.dist.toFixed(1)} km away
-                    {station.rating && (
-                      <span className="rating">
-                        ★ {station.rating.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {amenities.length > 0 && (
-                    <div className="popup-amenities">
-                      <div className="amenities-label">Facilities:</div>
-                      <div className="amenities-icons">{amenities}</div>
-                    </div>
-                  )}
-                  
-                  <div className="popup-prices">
-                    <div className="price-row">
-                      <span className="fuel-type">Diesel</span>
-                      <span className="fuel-price">€{station.diesel.toFixed(3)}</span>
-                    </div>
-                    <div className="price-row">
-                      <span className="fuel-type">E5</span>
-                      <span className="fuel-price">€{station.e5.toFixed(3)}</span>
-                    </div>
-                    <div className="price-row">
-                      <span className="fuel-type">E10</span>
-                      <span className="fuel-price">€{station.e10.toFixed(3)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="popup-actions">
-                    <button 
-                      className="popup-btn directions"
-                      onClick={() => window.open(
-                        `https://www.google.com/maps/dir/${userLocation?.lat},${userLocation?.lng}/${station.lat},${station.lng}`,
-                        '_blank'
-                      )}
-                    >
-                      <FaRoute className="icon" />
-                      Get Directions
-                    </button>
+        {stations.map(station => (
+          <Marker
+            key={station.id}
+            position={[station.lat, station.lng]}
+            icon={createStationIcon(station.brand, station.isOpen, selectedStation?.id === station.id, station.rating)}
+            eventHandlers={{
+              click: () => handleStationClick(station),
+            }}
+          >
+            <Popup className="station-popup">
+              <div className="popup-content">
+                <div className="popup-header">
+                  <h4 className="station-name">{station.name}</h4>
+                  <div className={`status-badge ${station.isOpen ? 'open' : 'closed'}`}>
+                    {station.isOpen ? 'Open' : 'Closed'}
                   </div>
                 </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+                
+                <div className="popup-brand">{station.brand}</div>
+                
+                <div className="popup-location">
+                  <span className="icon">📍</span>
+                  {station.street} {station.houseNumber}, {station.place}
+                </div>
+                
+                <div className="popup-distance">
+                  <span className="icon">📏</span>
+                  {station.dist.toFixed(1)} km away
+                  {station.rating && (
+                    <span className="rating">
+                      ⭐ {station.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                
+                {station.amenities && station.amenities.length > 0 && (
+                  <div className="popup-amenities">
+                    <div className="amenities-label">Facilities:</div>
+                    <div className="amenities-icons">
+                      {station.amenities.map((amenity, index) => (
+                        <span key={index} className="amenity-icon" title={amenity}>
+                          {getAmenityIcon(amenity)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="popup-prices">
+                  <div className="price-row">
+                    <span className="fuel-type">Diesel</span>
+                    <span className="fuel-price">€{station.diesel.toFixed(3)}</span>
+                  </div>
+                  <div className="price-row">
+                    <span className="fuel-type">E5</span>
+                    <span className="fuel-price">€{station.e5.toFixed(3)}</span>
+                  </div>
+                  <div className="price-row">
+                    <span className="fuel-type">E10</span>
+                    <span className="fuel-price">€{station.e10.toFixed(3)}</span>
+                  </div>
+                </div>
+                
+                <div className="popup-actions">
+                  <button 
+                    className="popup-btn directions"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (userLocation) {
+                        window.open(
+                          `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${station.lat},${station.lng}`,
+                          '_blank'
+                        );
+                      }
+                    }}
+                  >
+                    <span className="icon">🚗</span>
+                    Get Directions
+                  </button>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
 
         {/* Selected station highlight */}
         {selectedStation && (
@@ -476,39 +614,29 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
           />
         )}
 
-        <ZoomTracker onZoomChange={onZoomChange} />
+        <ZoomTracker onZoomChange={handleZoomChange} />
+        
+        {/* Custom Controls */}
+        <CustomControls
+          showPriceCircles={showPriceCircles}
+          setShowPriceCircles={setShowPriceCircles}
+          priceCircleType={priceCircleType}
+          setPriceCircleType={setPriceCircleType}
+          showClusters={showClusters}
+          setShowClusters={setShowClusters}
+          onRecenter={handleRecenter}
+        />
       </MapContainer>
 
-      {/* Heatmap Controls */}
-      <div className="heatmap-controls">
-        <button 
-          className={`heatmap-toggle ${showHeatmap ? 'active' : ''}`}
-          onClick={() => setShowHeatmap(!showHeatmap)}
-        >
-          Heatmap
-        </button>
-        {showHeatmap && (
-          <div className="heatmap-type">
-            <button 
-              className={`heatmap-btn ${heatmapType === 'diesel' ? 'active' : ''}`}
-              onClick={() => setHeatmapType('diesel')}
-            >
-              Diesel
-            </button>
-            <button 
-              className={`heatmap-btn ${heatmapType === 'e5' ? 'active' : ''}`}
-              onClick={() => setHeatmapType('e5')}
-            >
-              E5
-            </button>
-            <button 
-              className={`heatmap-btn ${heatmapType === 'e10' ? 'active' : ''}`}
-              onClick={() => setHeatmapType('e10')}
-            >
-              E10
-            </button>
-          </div>
-        )}
+      {/* Zoom level display */}
+      <div className="zoom-level-display">
+        Zoom: {currentZoom}x
+      </div>
+
+      {/* Loading overlay */}
+      <div className="map-loading-overlay">
+        <div className="loading-spinner"></div>
+        <p>Loading map data...</p>
       </div>
     </div>
   );

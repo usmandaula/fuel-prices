@@ -25,7 +25,11 @@ import {
   FaChevronRight,
   FaInfoCircle,
   FaStar,
-  FaRegStar
+  FaRegStar,
+  FaShoppingCart,
+  FaCoffee,
+  FaBuilding,
+  FaHome
 } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -265,6 +269,17 @@ const StationCard: React.FC<{
   const isCheapestE5 = cheapestFuel === station.e5;
   const isCheapestE10 = cheapestFuel === station.e10;
 
+  const getAmenityIcon = (amenity: string) => {
+    switch (amenity.toLowerCase()) {
+      case 'car wash': return <FaCar key={amenity} className="amenity-icon" title="Car Wash" />;
+      case 'shop': return <FaShoppingCart key={amenity} className="amenity-icon" title="Shop" />;
+      case '24/7': return <FaGasPump key={amenity} className="amenity-icon" title="24/7" />;
+      case 'cafe': return <FaCoffee key={amenity} className="amenity-icon" title="Cafe" />;
+      case 'atm': return <FaBuilding key={amenity} className="amenity-icon" title="ATM" />;
+      default: return <FaHome key={amenity} className="amenity-icon" title={amenity} />;
+    }
+  };
+
   return (
     <div 
       className={`station-card ${isSelected ? 'selected' : ''} ${station.isOpen ? 'open' : 'closed'}`}
@@ -340,6 +355,9 @@ const StationCard: React.FC<{
               {station.amenities.length > 3 && (
                 <span className="amenity-more">+{station.amenities.length - 3}</span>
               )}
+            </div>
+            <div className="amenities-icons">
+              {station.amenities.slice(0, 4).map((amenity, index) => getAmenityIcon(amenity))}
             </div>
           </div>
         )}
@@ -432,7 +450,6 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   // Map controls
   const [mapLayer, setMapLayer] = useState<MapLayer>('standard');
   const [showTraffic, setShowTraffic] = useState(false);
-  const [showSatellite, setShowSatellite] = useState(false);
   const [mapZoom, setMapZoom] = useState(13);
 
   // Get user location
@@ -749,11 +766,11 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                 <MapControls
                   onLayerChange={setMapLayer}
                   onToggleTraffic={() => setShowTraffic(!showTraffic)}
-                  onToggleSatellite={() => setShowSatellite(!showSatellite)}
+                  onToggleSatellite={() => setShowTraffic(!showTraffic)}
                   onRecenter={getUserLocation}
                   activeLayer={mapLayer}
                   showTraffic={showTraffic}
-                  showSatellite={showSatellite}
+                  showSatellite={showTraffic}
                 />
 
                 {/* Zoom Indicator */}
