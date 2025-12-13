@@ -1571,3 +1571,206 @@ body {
     white-space: nowrap;
   }
 }
+/* Add to GasStationsList.css */
+
+/* Clickable Stats Styling */
+.clickable-stat {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.clickable-stat:hover {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.clickable-stat.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+}
+
+.clickable-stat.active .stat-value,
+.clickable-stat.active .stat-label {
+  color: white;
+}
+
+.clickable-stat::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-stat:hover::after {
+  opacity: 1;
+}
+
+.best-price-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.stat-link-icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.clickable-stat:hover .stat-link-icon {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.stat-crown-icon {
+  font-size: 0.875rem;
+  color: #f59e0b;
+}
+
+.clickable-stat.active .stat-crown-icon {
+  color: white;
+}
+
+/* Enhanced Stats Grid Layout */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  transition: all 0.2s ease;
+  min-height: 80px;
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Station Highlight Animation */
+.station-card.highlighted {
+  animation: highlightPulse 2s ease;
+  position: relative;
+}
+
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Responsive Stats Grid */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .stat-item {
+    padding: 0.5rem;
+    min-height: 70px;
+  }
+  
+  .stat-value {
+    font-size: 1rem;
+  }
+  
+  .stat-label {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Updated Sidebar Footer */
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--gray-200);
+  background: white;
+}
+
+/* List View Footer */
+.list-view-footer {
+  padding: 0.75rem;
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* Tooltip for clickable stats */
+.clickable-stat {
+  position: relative;
+}
+
+.clickable-stat::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gray-900);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.clickable-stat:hover::before {
+  opacity: 1;
+  visibility: visible;
+  bottom: calc(100% + 8px);
+}

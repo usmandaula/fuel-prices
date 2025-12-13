@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import { 
@@ -35,7 +35,9 @@ import {
   FaChevronDown,
   FaArrowLeft,
   FaCrown,
-  FaTrophy
+  FaTrophy,
+  FaArrowRight,
+  FaExternalLinkAlt
 } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -91,6 +93,13 @@ type SortOption = 'distance' | 'price_diesel' | 'price_e5' | 'price_e10' | 'name
 type SortDirection = 'low_to_high' | 'high_to_low';
 type MapLayer = 'standard' | 'satellite' | 'terrain';
 type FuelType = 'diesel' | 'e5' | 'e10';
+
+interface BestPriceInfo {
+  price: number;
+  stationId: string;
+  stationName: string;
+  type: FuelType;
+}
 
 // Calculate distance
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -275,7 +284,8 @@ const StationCard: React.FC<{
   isBestForSelectedFuel?: boolean;
   isOverallBestPrice?: boolean;
   selectedFuelType?: 'all' | 'diesel' | 'e5' | 'e10';
-}> = ({ station, isSelected, onSelect, sortBy, isBestForSelectedFuel = false, isOverallBestPrice = false, selectedFuelType = 'all' }) => {
+  scrollToStation?: (stationId: string) => void;
+}> = ({ station, isSelected, onSelect, sortBy, isBestForSelectedFuel = false, isOverallBestPrice = false, selectedFuelType = 'all', scrollToStation }) => {
   // Find the cheapest fuel type for this station
   const getCheapestFuel = () => {
     const fuels = [
@@ -304,10 +314,18 @@ const StationCard: React.FC<{
     }
   };
 
+  const handleSelect = () => {
+    onSelect(station);
+    if (scrollToStation) {
+      scrollToStation(station.id);
+    }
+  };
+
   return (
     <div 
       className={`station-card ${isSelected ? 'selected' : ''} ${station.isOpen ? 'open' : 'closed'} ${isBestForSelectedFuel ? 'best-price-for-fuel' : ''} ${isOverallBestPrice ? 'overall-best-price' : ''}`}
-      onClick={() => onSelect(station)}
+      onClick={handleSelect}
+      id={`station-${station.id}`}
     >
       {isOverallBestPrice && selectedFuelType === 'all' && (
         <div className="overall-best-badge">
@@ -517,6 +535,103 @@ const MapControls: React.FC<{
   );
 };
 
+// Stats component with clickable best prices
+const ClickableStats: React.FC<{
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
+  onPriceClick: (stationId: string) => void;
+  openStationsCount: number;
+  sortedStationsLength: number;
+  averagePrice: string;
+  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
+}> = ({ bestPrices, onPriceClick, openStationsCount, sortedStationsLength, averagePrice, selectedFuelType }) => {
+  return (
+    <div className="stats-grid">
+      <div className="stat-item">
+        <div className="stat-value">{openStationsCount}</div>
+        <div className="stat-label">Open Now</div>
+      </div>
+      
+      <div className="stat-item">
+        <div className="stat-value">€{averagePrice}</div>
+        <div className="stat-label">Avg Price</div>
+      </div>
+      
+      {/* Diesel Best Price - Clickable */}
+      <div 
+        className={`stat-item ${selectedFuelType === 'diesel' ? 'active' : ''} clickable-stat`}
+        onClick={() => bestPrices.diesel && onPriceClick(bestPrices.diesel.stationId)}
+        title={bestPrices.diesel ? `Click to view ${bestPrices.diesel.stationName}` : ''}
+      >
+        <div className="stat-value">
+          {bestPrices.diesel ? (
+            <div className="best-price-value">
+              <span>€{bestPrices.diesel.price.toFixed(3)}</span>
+              <FaExternalLinkAlt className="stat-link-icon" />
+            </div>
+          ) : '-'}
+        </div>
+        <div className="stat-label">Best Diesel</div>
+      </div>
+      
+      {/* E5 Best Price - Clickable */}
+      <div 
+        className={`stat-item ${selectedFuelType === 'e5' ? 'active' : ''} clickable-stat`}
+        onClick={() => bestPrices.e5 && onPriceClick(bestPrices.e5.stationId)}
+        title={bestPrices.e5 ? `Click to view ${bestPrices.e5.stationName}` : ''}
+      >
+        <div className="stat-value">
+          {bestPrices.e5 ? (
+            <div className="best-price-value">
+              <span>€{bestPrices.e5.price.toFixed(3)}</span>
+              <FaExternalLinkAlt className="stat-link-icon" />
+            </div>
+          ) : '-'}
+        </div>
+        <div className="stat-label">Best E5</div>
+      </div>
+      
+      {/* E10 Best Price - Clickable */}
+      <div 
+        className={`stat-item ${selectedFuelType === 'e10' ? 'active' : ''} clickable-stat`}
+        onClick={() => bestPrices.e10 && onPriceClick(bestPrices.e10.stationId)}
+        title={bestPrices.e10 ? `Click to view ${bestPrices.e10.stationName}` : ''}
+      >
+        <div className="stat-value">
+          {bestPrices.e10 ? (
+            <div className="best-price-value">
+              <span>€{bestPrices.e10.price.toFixed(3)}</span>
+              <FaExternalLinkAlt className="stat-link-icon" />
+            </div>
+          ) : '-'}
+        </div>
+        <div className="stat-label">Best E10</div>
+      </div>
+      
+      {/* Overall Best Price - Clickable */}
+      <div 
+        className={`stat-item ${selectedFuelType === 'all' ? 'active' : ''} clickable-stat`}
+        onClick={() => bestPrices.overall && onPriceClick(bestPrices.overall.stationId)}
+        title={bestPrices.overall ? `Click to view ${bestPrices.overall.stationName}` : ''}
+      >
+        <div className="stat-value">
+          {bestPrices.overall ? (
+            <div className="best-price-value">
+              <span>€{bestPrices.overall.price.toFixed(3)}</span>
+              <FaCrown className="stat-crown-icon" />
+            </div>
+          ) : '-'}
+        </div>
+        <div className="stat-label">Best Overall</div>
+      </div>
+    </div>
+  );
+};
+
 // Sidebar for list view (shows only filters, no station cards)
 const ListViewSidebar: React.FC<{
   sortBy: SortOption;
@@ -530,8 +645,14 @@ const ListViewSidebar: React.FC<{
   openStationsCount: number;
   sortedStationsLength: number;
   averagePrice: string;
-  bestPriceInfo: { price: number; stationName?: string; type?: 'overall' | 'diesel' | 'e5' | 'e10' } | null;
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
   selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
+  onPriceClick: (stationId: string) => void;
   onToggleSidebar?: () => void;
   isSidebarCollapsed?: boolean;
 }> = ({
@@ -546,8 +667,9 @@ const ListViewSidebar: React.FC<{
   openStationsCount,
   sortedStationsLength,
   averagePrice,
-  bestPriceInfo,
+  bestPrices,
   selectedFuelType,
+  onPriceClick,
   onToggleSidebar,
   isSidebarCollapsed = false
 }) => {
@@ -635,29 +757,16 @@ const ListViewSidebar: React.FC<{
         </div>
       </div>
 
-      {/* Stats Footer */}
+      {/* Stats Footer with Clickable Best Prices */}
       <div className="sidebar-footer">
-        <div className="stats-grid">
-          <div className="stat-item">
-            <div className="stat-value">{openStationsCount}</div>
-            <div className="stat-label">Open Now</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">€{averagePrice}</div>
-            <div className="stat-label">Avg Price</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">
-              {bestPriceInfo ? 
-                `€${bestPriceInfo.price.toFixed(3)}` : 
-                '-'
-              }
-            </div>
-            <div className="stat-label">
-              {selectedFuelType === 'all' ? 'Best Overall' : `Best ${selectedFuelType.toUpperCase()}`}
-            </div>
-          </div>
-        </div>
+        <ClickableStats
+          bestPrices={bestPrices}
+          onPriceClick={onPriceClick}
+          openStationsCount={openStationsCount}
+          sortedStationsLength={sortedStationsLength}
+          averagePrice={averagePrice}
+          selectedFuelType={selectedFuelType}
+        />
       </div>
     </aside>
   );
@@ -682,6 +791,10 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   const [mapLayer, setMapLayer] = useState<MapLayer>('standard');
   const [showTraffic, setShowTraffic] = useState(false);
   const [mapZoom, setMapZoom] = useState(13);
+
+  // Refs for scrolling
+  const stationsGridRef = useRef<HTMLDivElement>(null);
+  const stationsListRef = useRef<HTMLDivElement>(null);
 
   // Get user location
   const getUserLocation = useCallback(() => {
@@ -766,36 +879,70 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
     });
   }, [data.stations, userLocation]);
 
-  // Find best price information
-  const { bestPriceInfo, processedStations } = useMemo(() => {
-    let bestPrice = Infinity;
-    let bestStation = null;
-    let bestFuelType: 'diesel' | 'e5' | 'e10' = 'diesel';
+  // Find best prices for each fuel type
+  const bestPrices = useMemo(() => {
+    let bestDiesel: BestPriceInfo | null = null;
+    let bestE5: BestPriceInfo | null = null;
+    let bestE10: BestPriceInfo | null = null;
+    let bestOverall: BestPriceInfo | null = null;
     
-    // Calculate best overall price
     stationsWithDistances.forEach(station => {
-      if (station.minPrice < bestPrice) {
-        bestPrice = station.minPrice;
-        bestStation = station;
+      // Diesel
+      if (!bestDiesel || station.diesel < bestDiesel.price) {
+        bestDiesel = {
+          price: station.diesel,
+          stationId: station.id,
+          stationName: station.name,
+          type: 'diesel'
+        };
+      }
+      
+      // E5
+      if (!bestE5 || station.e5 < bestE5.price) {
+        bestE5 = {
+          price: station.e5,
+          stationId: station.id,
+          stationName: station.name,
+          type: 'e5'
+        };
+      }
+      
+      // E10
+      if (!bestE10 || station.e10 < bestE10.price) {
+        bestE10 = {
+          price: station.e10,
+          stationId: station.id,
+          stationName: station.name,
+          type: 'e10'
+        };
+      }
+      
+      // Overall (minimum of all prices)
+      const minStationPrice = Math.min(station.diesel, station.e5, station.e10);
+      if (!bestOverall || minStationPrice < bestOverall.price) {
+        bestOverall = {
+          price: minStationPrice,
+          stationId: station.id,
+          stationName: station.name,
+          type: station.diesel === minStationPrice ? 'diesel' : 
+                station.e5 === minStationPrice ? 'e5' : 'e10'
+        };
       }
     });
 
-    // Mark stations with best prices
-    const stationsWithBestMarks = stationsWithDistances.map(station => {
-      const isOverallBestPrice = station.id === bestStation?.id;
+    return { diesel: bestDiesel, e5: bestE5, e10: bestE10, overall: bestOverall };
+  }, [stationsWithDistances]);
+
+  // Process stations with best price flags
+  const processedStations = useMemo(() => {
+    return stationsWithDistances.map(station => {
+      const isOverallBestPrice = station.id === bestPrices.overall?.stationId;
       
       // For specific fuel types
       let isBestForSelectedFuel = false;
       if (priceFilter !== 'all') {
-        // Find best price for selected fuel type
-        let bestFuelPrice = Infinity;
-        stationsWithDistances.forEach(s => {
-          const price = s[priceFilter];
-          if (price < bestFuelPrice) {
-            bestFuelPrice = price;
-          }
-        });
-        isBestForSelectedFuel = station[priceFilter] === bestFuelPrice;
+        const bestPriceForFuel = bestPrices[priceFilter];
+        isBestForSelectedFuel = bestPriceForFuel?.stationId === station.id;
       }
 
       return {
@@ -804,18 +951,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         isBestForSelectedFuel
       };
     });
-
-    const bestPriceData = bestStation ? { 
-      price: bestPrice, 
-      stationName: bestStation.name,
-      type: 'overall' as const
-    } : null;
-
-    return { 
-      bestPriceInfo: bestPriceData, 
-      processedStations: stationsWithBestMarks 
-    };
-  }, [stationsWithDistances, priceFilter]);
+  }, [stationsWithDistances, bestPrices, priceFilter]);
 
   // Filter and sort stations
   const { filteredStations, sortedStations } = useMemo(() => {
@@ -872,6 +1008,35 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
 
     return { filteredStations: filtered, sortedStations: sorted };
   }, [processedStations, showOnlyOpen, sortBy, sortDirection]);
+
+  // Scroll to station by ID - MOVED HERE after sortedStations is defined
+  const scrollToStation = useCallback((stationId: string) => {
+    const element = document.getElementById(`station-${stationId}`);
+    if (element) {
+      // Highlight the station
+      element.classList.add('highlighted');
+      setTimeout(() => {
+        element.classList.remove('highlighted');
+      }, 2000);
+
+      // Scroll to the station
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+
+      // Select the station
+      const station = sortedStations.find(s => s.id === stationId);
+      if (station) {
+        setSelectedStation(station);
+      }
+    }
+  }, [sortedStations]);
+
+  // Handle best price click
+  const handleBestPriceClick = useCallback((stationId: string) => {
+    scrollToStation(stationId);
+  }, [scrollToStation]);
 
   // Statistics
   const openStationsCount = useMemo(() => 
@@ -1008,7 +1173,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
               </div>
 
               {/* Station List (Only in Map View) */}
-              <div className="stations-list">
+              <div className="stations-list" ref={stationsListRef}>
                 {sortedStations.length === 0 ? (
                   <div className="empty-state">
                     <FaGasPump className="empty-icon" />
@@ -1026,34 +1191,22 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                       isBestForSelectedFuel={station.isBestForSelectedFuel || false}
                       isOverallBestPrice={station.isOverallBestPrice || false}
                       selectedFuelType={priceFilter}
+                      scrollToStation={scrollToStation}
                     />
                   ))
                 )}
               </div>
 
-              {/* Stats Footer */}
+              {/* Stats Footer with Clickable Best Prices */}
               <div className="sidebar-footer">
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-value">{openStationsCount}</div>
-                    <div className="stat-label">Open Now</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value">€{averagePrice}</div>
-                    <div className="stat-label">Avg Price</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value">
-                      {bestPriceInfo ? 
-                        `€${bestPriceInfo.price.toFixed(3)}` : 
-                        '-'
-                      }
-                    </div>
-                    <div className="stat-label">
-                      {priceFilter === 'all' ? 'Best Overall' : `Best ${priceFilter.toUpperCase()}`}
-                    </div>
-                  </div>
-                </div>
+                <ClickableStats
+                  bestPrices={bestPrices}
+                  onPriceClick={handleBestPriceClick}
+                  openStationsCount={openStationsCount}
+                  sortedStationsLength={sortedStations.length}
+                  averagePrice={averagePrice}
+                  selectedFuelType={priceFilter}
+                />
               </div>
             </aside>
 
@@ -1064,7 +1217,10 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                   stations={sortedStations}
                   selectedStation={selectedStation}
                   userLocation={userLocation}
-                  onStationSelect={setSelectedStation}
+                  onStationSelect={(station) => {
+                    setSelectedStation(station);
+                    scrollToStation(station.id);
+                  }}
                   searchedLocation={searchedLocation}
                   mapLayer={mapLayer}
                   showTraffic={showTraffic}
@@ -1194,8 +1350,9 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
               openStationsCount={openStationsCount}
               sortedStationsLength={sortedStations.length}
               averagePrice={averagePrice}
-              bestPriceInfo={bestPriceInfo}
+              bestPrices={bestPrices}
               selectedFuelType={priceFilter}
+              onPriceClick={handleBestPriceClick}
               onToggleSidebar={toggleSidebar}
               isSidebarCollapsed={isSidebarCollapsed}
             />
@@ -1239,7 +1396,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
 
               {/* Station Cards Grid Container */}
               <div className="list-view-content">
-                <div className="stations-grid-container">
+                <div className="stations-grid-container" ref={stationsGridRef}>
                   {sortedStations.length === 0 ? (
                     <div className="empty-state">
                       <FaGasPump className="empty-icon" />
@@ -1258,6 +1415,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                             isBestForSelectedFuel={station.isBestForSelectedFuel || false}
                             isOverallBestPrice={station.isOverallBestPrice || false}
                             selectedFuelType={priceFilter}
+                            scrollToStation={scrollToStation}
                           />
                         </div>
                       ))}
@@ -1266,33 +1424,16 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                 </div>
               </div>
 
-              {/* List View Footer Stats */}
+              {/* List View Footer Stats with Clickable Best Prices */}
               <div className="list-view-footer">
-                <div className="list-stats-grid">
-                  <div className="list-stat-item">
-                    <div className="list-stat-label">Total Stations</div>
-                    <div className="list-stat-value">{sortedStations.length}</div>
-                  </div>
-                  <div className="list-stat-item">
-                    <div className="list-stat-label">Open Now</div>
-                    <div className="list-stat-value">{openStationsCount}</div>
-                  </div>
-                  <div className="list-stat-item">
-                    <div className="list-stat-label">
-                      {priceFilter === 'all' ? 'Best Overall' : `Best ${priceFilter.toUpperCase()}`}
-                    </div>
-                    <div className="list-stat-value">
-                      {bestPriceInfo ? 
-                        `€${bestPriceInfo.price.toFixed(3)}` : 
-                        'N/A'
-                      }
-                    </div>
-                  </div>
-                  <div className="list-stat-item">
-                    <div className="list-stat-label">Avg Price</div>
-                    <div className="list-stat-value">€{averagePrice}</div>
-                  </div>
-                </div>
+                <ClickableStats
+                  bestPrices={bestPrices}
+                  onPriceClick={handleBestPriceClick}
+                  openStationsCount={openStationsCount}
+                  sortedStationsLength={sortedStations.length}
+                  averagePrice={averagePrice}
+                  selectedFuelType={priceFilter}
+                />
               </div>
             </div>
           </>
@@ -1330,7 +1471,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         </div>
       </footer>
 
-      {/* Add CSS for best price features */}
+      {/* Add CSS for clickable stats and scrolling */}
       <style jsx>{`
         .stations-grid-container {
           flex: 1;
