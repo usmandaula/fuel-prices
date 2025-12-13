@@ -14,16 +14,28 @@ import {
   FaSortAmountDown,
   FaSortAmountUp,
   FaList,
-  FaMap
+  FaMap,
+  FaCompass,
+  FaLayerGroup,
+  FaRuler,
+  FaCar,
+  FaEye,
+  FaEyeSlash,
+  FaTimes,
+  FaChevronRight,
+  FaInfoCircle,
+  FaStar,
+  FaRegStar
 } from 'react-icons/fa';
 import axios from 'axios';
 
-// Dynamically import the map component
-const MapView = dynamic(() => import('./MapView'), {
+// Dynamically import the enhanced map component
+const DetailedMapView = dynamic(() => import('./DetailedMapView'), {
   ssr: false,
   loading: () => (
-    <div className="map-placeholder">
-      <div className="loading-spinner"></div>
+    <div className="map-loading">
+      <div className="map-spinner"></div>
+      <p>Loading detailed map...</p>
     </div>
   )
 });
@@ -44,6 +56,8 @@ interface GasStation {
   isOpen: boolean;
   houseNumber: string;
   postCode: number;
+  rating?: number;
+  amenities?: string[];
 }
 
 interface GasStationData {
@@ -54,37 +68,19 @@ interface GasStationData {
   stations: GasStation[];
 }
 
-interface GasStationCardProps {
-  station: GasStation;
-  onSelectStation?: (station: GasStation) => void;
-  isSelected?: boolean;
-  sortBy?: SortOption;
-}
-
 interface GasStationsListProps {
   data: GasStationData;
   initialUserLocation?: { lat: number; lng: number };
 }
 
-interface LocationSuggestion {
-  display_name: string;
-  lat: string;
-  lon: string;
-  address: {
-    postcode?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-  };
-}
-
 // Sorting types
-type SortOption = 'distance' | 'price_diesel' | 'price_e5' | 'price_e10' | 'name';
+type SortOption = 'distance' | 'price_diesel' | 'price_e5' | 'price_e10' | 'name' | 'rating';
 type SortDirection = 'asc' | 'desc';
+type MapLayer = 'standard' | 'satellite' | 'terrain';
 
-// Helper function to calculate distance
+// Calculate distance
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -95,163 +91,326 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-// Compact station card
-const GasStationCard: React.FC<GasStationCardProps> = ({ 
-  station, 
-  onSelectStation,
-  isSelected,
-  sortBy
-}) => {
-  const handleCardClick = () => {
-    if (onSelectStation) {
-      onSelectStation(station);
+// Enhanced search component
+const EnhancedSearch: React.FC<{
+  onLocationFound: (location: { lat: number; lng: number; name: string }) => void;
+  currentLocation?: { lat: number; lng: number };
+}> = ({ onLocationFound, currentLocation }) => {
+  const [query, setQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<any[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('gasRecentSearches');
+    if (saved) {
+      setRecentSearches(JSON.parse(saved).slice(0, 5));
+    }
+  }, []);
+
+  const searchLocation = async (searchQuery: string) => {
+    setIsSearching(true);
+    try {
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=de&limit=5`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Search error:', error);
+      return [];
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const getCheapestFuel = () => {
-    const prices = [
-      { type: 'diesel', value: station.diesel },
-      { type: 'e5', value: station.e5 },
-      { type: 'e10', value: station.e10 }
-    ];
-    return prices.reduce((cheapest, current) => 
-      current.value < cheapest.value ? current : cheapest
-    );
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    const results = await searchLocation(query);
+    if (results.length > 0) {
+      const firstResult = results[0];
+      const location = {
+        lat: parseFloat(firstResult.lat),
+        lng: parseFloat(firstResult.lon),
+        name: firstResult.display_name
+      };
+      onLocationFound(location);
+      
+      // Save to recent searches
+      const updatedRecent = [
+        { ...location, query },
+        ...recentSearches.filter(s => s.query !== query)
+      ].slice(0, 5);
+      setRecentSearches(updatedRecent);
+      localStorage.setItem('gasRecentSearches', JSON.stringify(updatedRecent));
+    }
   };
 
-  const cheapest = getCheapestFuel();
+  const handleInputChange = async (value: string) => {
+    setQuery(value);
+    if (value.length > 2) {
+      const results = await searchLocation(value);
+      setSuggestions(results);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  return (
+    <div className="enhanced-search">
+      <form onSubmit={handleSearch} className="search-bar">
+        <div className="search-input-wrapper">
+          <FaSearch className="search-icon" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Search location, address, or zip code..."
+            className="search-input"
+          />
+          {query && (
+            <button 
+              type="button" 
+              className="clear-search"
+              onClick={() => {
+                setQuery('');
+                setShowSuggestions(false);
+              }}
+            >
+              <FaTimes />
+            </button>
+          )}
+          <button 
+            type="submit" 
+            className="search-submit"
+            disabled={isSearching || !query.trim()}
+          >
+            {isSearching ? '...' : 'Search'}
+          </button>
+        </div>
+        
+        <button 
+          type="button"
+          className="current-location-btn"
+          onClick={() => currentLocation && onLocationFound({...currentLocation, name: 'Current Location'})}
+          title="Use current location"
+        >
+          <FaLocationArrow />
+        </button>
+      </form>
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="suggestions-dropdown">
+          {suggestions.map((item, index) => (
+            <div 
+              key={index}
+              className="suggestion-item"
+              onClick={() => {
+                const location = {
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  name: item.display_name
+                };
+                onLocationFound(location);
+                setQuery(item.display_name);
+                setShowSuggestions(false);
+              }}
+            >
+              <FaMapMarkerAlt className="suggestion-icon" />
+              <div className="suggestion-content">
+                <div className="suggestion-title">{item.display_name.split(',')[0]}</div>
+                <div className="suggestion-subtitle">{item.display_name.split(',').slice(1).join(',').trim()}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {recentSearches.length > 0 && !showSuggestions && query.length === 0 && (
+        <div className="recent-searches">
+          <div className="recent-header">Recent Searches</div>
+          <div className="recent-items">
+            {recentSearches.map((search, index) => (
+              <button
+                key={index}
+                className="recent-item"
+                onClick={() => {
+                  onLocationFound(search);
+                  setQuery(search.query);
+                }}
+              >
+                <FaSearch className="recent-icon" />
+                <span>{search.query}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Enhanced station card for sidebar
+const StationCard: React.FC<{
+  station: GasStation;
+  isSelected: boolean;
+  onSelect: (station: GasStation) => void;
+  sortBy: SortOption;
+}> = ({ station, isSelected, onSelect, sortBy }) => {
+  const cheapestFuel = Math.min(station.diesel, station.e5, station.e10);
+  const isCheapestDiesel = cheapestFuel === station.diesel;
+  const isCheapestE5 = cheapestFuel === station.e5;
+  const isCheapestE10 = cheapestFuel === station.e10;
 
   return (
     <div 
-      className={`station-card ${station.isOpen ? 'open' : 'closed'} ${isSelected ? 'selected' : ''}`}
-      onClick={handleCardClick}
+      className={`station-card ${isSelected ? 'selected' : ''} ${station.isOpen ? 'open' : 'closed'}`}
+      onClick={() => onSelect(station)}
     >
       <div className="card-header">
-        <div className="station-name">
-          <h3>{station.name}</h3>
-          <span className={`status ${station.isOpen ? 'open' : 'closed'}`}>
-            {station.isOpen ? 'Open' : 'Closed'}
-          </span>
+        <div className="station-info">
+          <h3 className="station-name">
+            <FaGasPump className="station-icon" />
+            {station.name}
+          </h3>
+          <div className="station-meta">
+            <span className={`status-badge ${station.isOpen ? 'open' : 'closed'}`}>
+              {station.isOpen ? 'Open Now' : 'Closed'}
+            </span>
+            <span className="brand-badge">{station.brand}</span>
+            {station.rating && (
+              <div className="rating">
+                {[...Array(5)].map((_, i) => (
+                  i < Math.floor(station.rating!) ? 
+                    <FaStar key={i} className="star filled" /> : 
+                    <FaRegStar key={i} className="star" />
+                ))}
+                <span className="rating-value">{station.rating.toFixed(1)}</span>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="brand">{station.brand}</div>
+        <div className="distance-indicator">
+          <FaRuler className="distance-icon" />
+          <span className="distance-value">{station.dist.toFixed(1)} km</span>
+          {sortBy === 'distance' && <div className="sort-indicator"></div>}
+        </div>
       </div>
 
       <div className="card-content">
-        <div className="location">
-          <FaMapMarkerAlt className="icon-sm" />
-          <span>{station.dist.toFixed(1)} km • {station.place}</span>
+        <div className="location-info">
+          <FaMapMarkerAlt className="location-icon" />
+          <span>{station.street} {station.houseNumber}, {station.place}</span>
         </div>
-        
-        <div className="prices-compact">
-          <div className="price-row">
-            <span className="fuel-type">Diesel</span>
-            <span className={`price ${sortBy === 'price_diesel' ? 'highlight' : ''}`}>
-              €{station.diesel.toFixed(3)}
-            </span>
+
+        <div className="prices-grid">
+          <div className={`price-item ${isCheapestDiesel ? 'cheapest' : ''} ${sortBy === 'price_diesel' ? 'sorting' : ''}`}>
+            <div className="fuel-label">
+              <span className="fuel-name">Diesel</span>
+              {isCheapestDiesel && <span className="cheapest-tag">Best</span>}
+            </div>
+            <div className="price-value">€{station.diesel.toFixed(3)}</div>
           </div>
-          <div className="price-row">
-            <span className="fuel-type">E5</span>
-            <span className={`price ${sortBy === 'price_e5' ? 'highlight' : ''}`}>
-              €{station.e5.toFixed(3)}
-            </span>
+          <div className={`price-item ${isCheapestE5 ? 'cheapest' : ''} ${sortBy === 'price_e5' ? 'sorting' : ''}`}>
+            <div className="fuel-label">
+              <span className="fuel-name">E5</span>
+              {isCheapestE5 && <span className="cheapest-tag">Best</span>}
+            </div>
+            <div className="price-value">€{station.e5.toFixed(3)}</div>
           </div>
-          <div className="price-row">
-            <span className="fuel-type">E10</span>
-            <span className={`price ${sortBy === 'price_e10' ? 'highlight' : ''}`}>
-              €{station.e10.toFixed(3)}
-            </span>
+          <div className={`price-item ${isCheapestE10 ? 'cheapest' : ''} ${sortBy === 'price_e10' ? 'sorting' : ''}`}>
+            <div className="fuel-label">
+              <span className="fuel-name">E10</span>
+              {isCheapestE10 && <span className="cheapest-tag">Best</span>}
+            </div>
+            <div className="price-value">€{station.e10.toFixed(3)}</div>
           </div>
         </div>
 
-        <div className="cheapest-badge">
-          <FaMoneyBillWave className="icon-sm" />
-          <span>Best: {cheapest.type.toUpperCase()} €{cheapest.value.toFixed(3)}</span>
+        {station.amenities && station.amenities.length > 0 && (
+          <div className="amenities">
+            <div className="amenities-label">Facilities:</div>
+            <div className="amenities-list">
+              {station.amenities.slice(0, 3).map((amenity, index) => (
+                <span key={index} className="amenity-tag">{amenity}</span>
+              ))}
+              {station.amenities.length > 3 && (
+                <span className="amenity-more">+{station.amenities.length - 3}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="card-actions">
+          <button className="action-btn directions">
+            <FaRoute />
+            Directions
+          </button>
+          <button className="action-btn details">
+            <FaChevronRight />
+            Details
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-// Compact search component
-const LocationSearch: React.FC<{
-  onLocationFound: (location: { lat: number; lng: number; name: string }) => void;
-  currentLocation?: { lat: number; lng: number };
-}> = ({ onLocationFound, currentLocation }) => {
-  const [zipCode, setZipCode] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!zipCode.trim()) {
-      setError('Enter zip code');
-      return;
-    }
-
-    setIsSearching(true);
-    setError(null);
-
-    try {
-      const response = await axios.get(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(zipCode)}&countrycodes=de&limit=1`
-      );
-
-      if (response.data.length === 0) {
-        setError('Location not found');
-        return;
-      }
-
-      const location = response.data[0];
-      onLocationFound({
-        lat: parseFloat(location.lat),
-        lng: parseFloat(location.lon),
-        name: location.display_name
-      });
-    } catch (err) {
-      setError('Search failed');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (currentLocation) {
-      onLocationFound({
-        ...currentLocation,
-        name: 'Current Location'
-      });
-    }
-  };
-
+// Map controls component
+const MapControls: React.FC<{
+  onLayerChange: (layer: MapLayer) => void;
+  onToggleTraffic: () => void;
+  onToggleSatellite: () => void;
+  onRecenter: () => void;
+  activeLayer: MapLayer;
+  showTraffic: boolean;
+  showSatellite: boolean;
+}> = ({ onLayerChange, onToggleTraffic, onToggleSatellite, onRecenter, activeLayer, showTraffic, showSatellite }) => {
   return (
-    <div className="search-compact">
-      <form onSubmit={handleSearch} className="search-form">
-        <div className="search-input">
-          <FaSearch className="icon" />
-          <input
-            type="text"
-            value={zipCode}
-            onChange={(e) => setZipCode(e.target.value)}
-            placeholder="Enter zip code"
-            maxLength={10}
-          />
-          <button 
-            type="submit" 
-            className="search-btn"
-            disabled={isSearching || !zipCode.trim()}
-          >
-            {isSearching ? '...' : 'Go'}
-          </button>
-        </div>
-        {error && <div className="search-error">{error}</div>}
-      </form>
-      <button 
-        onClick={handleUseCurrentLocation}
-        className="location-btn"
-      >
-        <FaLocationArrow className="icon" />
-        My Location
-      </button>
+    <div className="map-controls">
+      <div className="controls-group">
+        <button 
+          className={`control-btn ${activeLayer === 'standard' ? 'active' : ''}`}
+          onClick={() => onLayerChange('standard')}
+          title="Standard Map"
+        >
+          <FaLayerGroup />
+        </button>
+        <button 
+          className={`control-btn ${activeLayer === 'satellite' ? 'active' : ''}`}
+          onClick={() => onLayerChange('satellite')}
+          title="Satellite View"
+        >
+          <FaEye />
+        </button>
+        <button 
+          className={`control-btn ${activeLayer === 'terrain' ? 'active' : ''}`}
+          onClick={() => onLayerChange('terrain')}
+          title="Terrain View"
+        >
+          <FaCompass />
+        </button>
+      </div>
+      
+      <div className="controls-group">
+        <button 
+          className={`control-btn ${showTraffic ? 'active' : ''}`}
+          onClick={onToggleTraffic}
+          title="Show Traffic"
+        >
+          <FaCar />
+        </button>
+        <button 
+          className="control-btn"
+          onClick={onRecenter}
+          title="Recenter Map"
+        >
+          <FaLocationArrow />
+        </button>
+      </div>
     </div>
   );
 };
@@ -259,18 +418,24 @@ const LocationSearch: React.FC<{
 // Main component
 const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLocation }) => {
   const [selectedStation, setSelectedStation] = useState<GasStation | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-  const [isClient, setIsClient] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string } | undefined>(initialUserLocation);
-  const [isLocating, setIsLocating] = useState(false);
   const [searchedLocation, setSearchedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
   
   // Sorting states
   const [sortBy, setSortBy] = useState<SortOption>('distance');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showOnlyOpen, setShowOnlyOpen] = useState(false);
+  const [priceFilter, setPriceFilter] = useState<'all' | 'diesel' | 'e5' | 'e10'>('all');
+  
+  // Map controls
+  const [mapLayer, setMapLayer] = useState<MapLayer>('standard');
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [showSatellite, setShowSatellite] = useState(false);
+  const [mapZoom, setMapZoom] = useState(13);
 
-  // Get user's current location
+  // Get user location
   const getUserLocation = useCallback(() => {
     if (!navigator.geolocation) return;
 
@@ -286,22 +451,19 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         setSearchedLocation(null);
         setIsLocating(false);
       },
-      () => {
-        setIsLocating(false);
-      },
+      () => setIsLocating(false),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
 
-  // Handle zip code location found
-  const handleZipCodeLocationFound = (location: { lat: number; lng: number; name: string }) => {
+  // Handle location found
+  const handleLocationFound = (location: { lat: number; lng: number; name: string }) => {
     setSearchedLocation(location);
     setUserLocation(location);
   };
 
   // Initialize
   useEffect(() => {
-    setIsClient(true);
     if (!initialUserLocation && !searchedLocation) {
       getUserLocation();
     }
@@ -310,14 +472,18 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   // Validate data
   if (!data.ok || data.status !== 'ok' || !Array.isArray(data.stations)) {
     return (
-      <div className="error">
-        <h2>Error Loading Data</h2>
-        <p>Unable to retrieve gas station information.</p>
+      <div className="error-container">
+        <div className="error-content">
+          <FaInfoCircle className="error-icon" />
+          <h2>Unable to Load Data</h2>
+          <p>Please check your connection and try again.</p>
+          <button className="retry-btn">Retry</button>
+        </div>
       </div>
     );
   }
 
-  // Calculate distances
+  // Process stations
   const stationsWithDistances = data.stations.map(station => {
     if (userLocation) {
       const distance = calculateDistance(
@@ -326,7 +492,12 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         station.lat,
         station.lng
       );
-      return { ...station, dist: distance };
+      return { 
+        ...station, 
+        dist: distance,
+        rating: Math.random() * 2 + 3, // Mock rating
+        amenities: ['24/7', 'Car Wash', 'Shop', 'ATM'].slice(0, Math.floor(Math.random() * 4) + 1)
+      };
     }
     return station;
   });
@@ -336,6 +507,12 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   
   if (showOnlyOpen) {
     filteredStations = filteredStations.filter(station => station.isOpen);
+  }
+
+  if (priceFilter !== 'all') {
+    filteredStations = filteredStations.sort((a, b) => 
+      (a[priceFilter] as number) - (b[priceFilter] as number)
+    );
   }
 
   const sortedStations = [...filteredStations].sort((a, b) => {
@@ -363,6 +540,10 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         valueA = a.name.toLowerCase();
         valueB = b.name.toLowerCase();
         break;
+      case 'rating':
+        valueA = a.rating || 0;
+        valueB = b.rating || 0;
+        break;
       default:
         valueA = a.dist;
         valueB = b.dist;
@@ -377,220 +558,317 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
     }
   });
 
+  // Statistics
   const openStationsCount = sortedStations.filter(s => s.isOpen).length;
-
-  // Sort options
-  const sortOptions = [
-    { value: 'distance', label: 'Distance', icon: FaRoute },
-    { value: 'price_diesel', label: 'Diesel', icon: FaMoneyBillWave },
-    { value: 'price_e5', label: 'E5', icon: FaMoneyBillWave },
-    { value: 'price_e10', label: 'E10', icon: FaMoneyBillWave },
-    { value: 'name', label: 'Name', icon: FaGasPump },
-  ] as const;
+  const cheapestStation = sortedStations[0];
+  const averagePrice = sortedStations.length > 0 
+    ? (sortedStations.reduce((sum, s) => sum + s.diesel + s.e5 + s.e10, 0) / (sortedStations.length * 3)).toFixed(3)
+    : '0.000';
 
   return (
-    <div className="gas-stations-app">
-      {/* Header */}
-      <header className="app-header">
-        <div className="header-top">
-          <h1>
-            <FaGasPump className="icon" />
-            <span>Gas Stations</span>
-          </h1>
-          <div className="header-actions">
-            <div className="view-toggle">
-              <button 
-                className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
-                onClick={() => setViewMode('list')}
-                title="List View"
-              >
-                <FaList />
-              </button>
-              <button 
-                className={`toggle-btn ${viewMode === 'map' ? 'active' : ''}`}
-                onClick={() => setViewMode('map')}
-                title="Map View"
-              >
-                <FaMap />
-              </button>
-            </div>
+    <div className="gas-stations-app-enhanced">
+      {/* Top Navigation */}
+      <nav className="app-nav">
+        <div className="nav-left">
+          <div className="app-brand">
+            <FaGasPump className="brand-icon" />
+            <h1>FuelFinder</h1>
+            <span className="beta-badge">BETA</span>
           </div>
         </div>
-
-        {/* Search */}
-        <div className="search-section">
-          <LocationSearch 
-            onLocationFound={handleZipCodeLocationFound}
+        
+        <div className="nav-center">
+          <EnhancedSearch 
+            onLocationFound={handleLocationFound}
             currentLocation={userLocation}
           />
         </div>
-
-        {/* Location info */}
-        <div className="location-info">
-          {userLocation ? (
-            <div className="location-active">
-              <FaMapMarkerAlt className="icon" />
-              <span>{userLocation.name}</span>
-              <button 
-                onClick={getUserLocation}
-                className="refresh-btn"
-                disabled={isLocating}
-              >
-                <FaLocationArrow className="icon-sm" />
-              </button>
-            </div>
-          ) : (
-            <div className="location-loading">
-              <div className="spinner-small"></div>
-              <span>Getting location...</span>
-            </div>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div className="stats-row">
-          <div className="stat">
-            <span className="stat-value">{sortedStations.length}</span>
-            <span className="stat-label">Stations</span>
-          </div>
-          <div className="stat">
-            <span className="stat-value">{openStationsCount}</span>
-            <span className="stat-label">Open</span>
-          </div>
-          {sortBy.startsWith('price_') && sortedStations[0] && (
-            <div className="stat">
-              <span className="stat-value">
-                €{sortedStations[0][sortBy.split('_')[1] as keyof GasStation]?.toFixed(3)}
-              </span>
-              <span className="stat-label">Best Price</span>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Controls */}
-      <div className="controls-bar">
-        <div className="sort-controls">
-          <div className="sort-buttons">
-            {sortOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.value}
-                  className={`sort-btn ${sortBy === option.value ? 'active' : ''}`}
-                  onClick={() => setSortBy(option.value)}
-                  title={`Sort by ${option.label}`}
-                >
-                  <Icon className="icon-sm" />
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          <button
-            className={`direction-btn ${sortDirection}`}
-            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-            title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
-          >
-            {sortDirection === 'asc' ? <FaSortAmountDown /> : <FaSortAmountUp />}
-          </button>
-        </div>
         
-        <button
-          className={`filter-btn ${showOnlyOpen ? 'active' : ''}`}
-          onClick={() => setShowOnlyOpen(!showOnlyOpen)}
-          title={showOnlyOpen ? 'Show all stations' : 'Show only open stations'}
-        >
-          <FaFilter className="icon-sm" />
-          <span>Open Only</span>
-          {showOnlyOpen && <span className="filter-dot"></span>}
-        </button>
-      </div>
+        <div className="nav-right">
+          <div className="view-switch">
+            <button 
+              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+            >
+              <FaList />
+              <span>List</span>
+            </button>
+            <button 
+              className={`view-btn ${viewMode === 'map' ? 'active' : ''}`}
+              onClick={() => setViewMode('map')}
+            >
+              <FaMap />
+              <span>Map</span>
+            </button>
+          </div>
+        </div>
+      </nav>
 
       {/* Main Content */}
-      <main className="main-content">
-        {viewMode === 'map' && isClient ? (
-          <div className="map-container">
-            <MapView 
-              stations={sortedStations}
-              selectedStation={selectedStation}
-              userLocation={userLocation}
-              onStationSelect={setSelectedStation}
-              searchedLocation={searchedLocation}
-            />
+      <main className="app-main">
+        {/* Left Sidebar */}
+        <aside className="app-sidebar">
+          <div className="sidebar-header">
+            <h2>Gas Stations</h2>
+            <div className="station-count">
+              <span className="count-number">{sortedStations.length}</span>
+              <span className="count-label">stations</span>
+            </div>
           </div>
-        ) : (
+
+          {/* Quick Filters */}
+          <div className="quick-filters">
+            <div className="filter-group">
+              <label className="filter-label">Sort by:</label>
+              <div className="sort-options">
+                {['distance', 'price_diesel', 'price_e5', 'price_e10', 'name', 'rating'].map((option) => (
+                  <button
+                    key={option}
+                    className={`sort-option ${sortBy === option ? 'active' : ''}`}
+                    onClick={() => setSortBy(option as SortOption)}
+                  >
+                    {option === 'distance' && <FaRuler />}
+                    {option.startsWith('price_') && <FaMoneyBillWave />}
+                    {option === 'name' && <FaGasPump />}
+                    {option === 'rating' && <FaStar />}
+                    <span>{option.replace('_', ' ')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <label className="filter-label">Filters:</label>
+              <div className="filter-options">
+                <button 
+                  className={`filter-toggle ${showOnlyOpen ? 'active' : ''}`}
+                  onClick={() => setShowOnlyOpen(!showOnlyOpen)}
+                >
+                  <FaFilter />
+                  <span>Open Now ({openStationsCount})</span>
+                </button>
+                
+                <div className="price-filter">
+                  <span className="filter-label">Fuel Type:</span>
+                  <div className="price-buttons">
+                    {['all', 'diesel', 'e5', 'e10'].map((type) => (
+                      <button
+                        key={type}
+                        className={`price-btn ${priceFilter === type ? 'active' : ''}`}
+                        onClick={() => setPriceFilter(type as any)}
+                      >
+                        {type === 'all' ? 'All' : type.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="sort-direction">
+              <button 
+                className={`direction-btn ${sortDirection === 'asc' ? 'active' : ''}`}
+                onClick={() => setSortDirection('asc')}
+              >
+                <FaSortAmountDown />
+                <span>Ascending</span>
+              </button>
+              <button 
+                className={`direction-btn ${sortDirection === 'desc' ? 'active' : ''}`}
+                onClick={() => setSortDirection('desc')}
+              >
+                <FaSortAmountUp />
+                <span>Descending</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Station List */}
           <div className="stations-list">
             {sortedStations.length === 0 ? (
               <div className="empty-state">
-                <FaGasPump className="icon-lg" />
+                <FaGasPump className="empty-icon" />
                 <p>No stations found</p>
-                {showOnlyOpen && <p>Try turning off "Open Only" filter</p>}
+                <p className="empty-subtitle">Try adjusting your filters</p>
               </div>
             ) : (
               sortedStations.map((station) => (
-                <GasStationCard 
-                  key={station.id} 
+                <StationCard
+                  key={station.id}
                   station={station}
-                  onSelectStation={setSelectedStation}
                   isSelected={selectedStation?.id === station.id}
+                  onSelect={setSelectedStation}
                   sortBy={sortBy}
                 />
               ))
             )}
           </div>
-        )}
-      </main>
 
-      {/* Selected Station Details */}
-      {selectedStation && (
-        <div className="selected-details">
-          <div className="details-header">
-            <h3>{selectedStation.name}</h3>
-            <button 
-              className="close-btn"
-              onClick={() => setSelectedStation(null)}
-            >
-              ×
-            </button>
-          </div>
-          <div className="details-content">
-            <div className="detail-row">
-              <span className="label">Address:</span>
-              <span>{selectedStation.street} {selectedStation.houseNumber}, {selectedStation.place}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Distance:</span>
-              <span>{selectedStation.dist.toFixed(1)} km</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">Prices:</span>
-              <div className="price-tags">
-                <span className="price-tag">Diesel €{selectedStation.diesel.toFixed(3)}</span>
-                <span className="price-tag">E5 €{selectedStation.e5.toFixed(3)}</span>
-                <span className="price-tag">E10 €{selectedStation.e10.toFixed(3)}</span>
+          {/* Stats Footer */}
+          <div className="sidebar-footer">
+            <div className="stats-grid">
+              <div className="stat-item">
+                <div className="stat-value">{openStationsCount}</div>
+                <div className="stat-label">Open Now</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">€{averagePrice}</div>
+                <div className="stat-label">Avg Price</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {cheapestStation ? `€${Math.min(
+                    cheapestStation.diesel,
+                    cheapestStation.e5,
+                    cheapestStation.e10
+                  ).toFixed(3)}` : '-'}
+                </div>
+                <div className="stat-label">Best Price</div>
               </div>
             </div>
-            {userLocation && (
-              <a 
-                href={`https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedStation.lat},${selectedStation.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="directions-btn"
-              >
-                <FaRoute className="icon-sm" />
-                Get Directions
-              </a>
+          </div>
+        </aside>
+
+        {/* Map Area */}
+        <div className="app-map-area">
+          {viewMode === 'map' ? (
+            <>
+              <div className="map-container">
+                <DetailedMapView
+                  stations={sortedStations}
+                  selectedStation={selectedStation}
+                  userLocation={userLocation}
+                  onStationSelect={setSelectedStation}
+                  searchedLocation={searchedLocation}
+                  mapLayer={mapLayer}
+                  showTraffic={showTraffic}
+                  onZoomChange={setMapZoom}
+                />
+                
+                {/* Map Controls Overlay */}
+                <MapControls
+                  onLayerChange={setMapLayer}
+                  onToggleTraffic={() => setShowTraffic(!showTraffic)}
+                  onToggleSatellite={() => setShowSatellite(!showSatellite)}
+                  onRecenter={getUserLocation}
+                  activeLayer={mapLayer}
+                  showTraffic={showTraffic}
+                  showSatellite={showSatellite}
+                />
+
+                {/* Zoom Indicator */}
+                <div className="zoom-indicator">
+                  <div className="zoom-level">Zoom: {mapZoom}x</div>
+                </div>
+
+                {/* Selected Station Info Overlay */}
+                {selectedStation && (
+                  <div className="selected-overlay">
+                    <div className="overlay-header">
+                      <h3>{selectedStation.name}</h3>
+                      <button 
+                        className="close-overlay"
+                        onClick={() => setSelectedStation(null)}
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                    <div className="overlay-content">
+                      <div className="overlay-prices">
+                        <div className="price-display">
+                          <span className="fuel-type">Diesel</span>
+                          <span className="fuel-price">€{selectedStation.diesel.toFixed(3)}</span>
+                        </div>
+                        <div className="price-display">
+                          <span className="fuel-type">E5</span>
+                          <span className="fuel-price">€{selectedStation.e5.toFixed(3)}</span>
+                        </div>
+                        <div className="price-display">
+                          <span className="fuel-type">E10</span>
+                          <span className="fuel-price">€{selectedStation.e10.toFixed(3)}</span>
+                        </div>
+                      </div>
+                      <button className="get-directions-btn">
+                        <FaRoute />
+                        Get Directions ({selectedStation.dist.toFixed(1)} km)
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Map Legend */}
+              <div className="map-legend">
+                <div className="legend-title">Map Legend</div>
+                <div className="legend-items">
+                  <div className="legend-item">
+                    <div className="legend-color open"></div>
+                    <span>Open Station</span>
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-color closed"></div>
+                    <span>Closed Station</span>
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-color selected"></div>
+                    <span>Selected</span>
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-color user"></div>
+                    <span>Your Location</span>
+                  </div>
+                  <div className="legend-item">
+                    <div className="legend-color searched"></div>
+                    <span>Search Location</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="list-view-container">
+              {/* Alternative list view for large screens */}
+              <div className="list-view-header">
+                <h2>Gas Stations List View</h2>
+                <div className="list-stats">
+                  <span>{sortedStations.length} stations • </span>
+                  <span>{openStationsCount} open • </span>
+                  <span>Sorted by {sortBy.replace('_', ' ')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Bottom Info Bar */}
+      <footer className="app-footer">
+        <div className="footer-content">
+          <div className="footer-left">
+            <span className="location-info">
+              <FaMapMarkerAlt />
+              {userLocation?.name || 'Locating...'}
+            </span>
+            {isLocating && (
+              <span className="locating-indicator">
+                <div className="pulse-dot"></div>
+                Locating...
+              </span>
             )}
           </div>
+          <div className="footer-center">
+            <span className="data-source">Data: {data.data} • Map: OpenStreetMap</span>
+          </div>
+          <div className="footer-right">
+            <button 
+              className="refresh-btn"
+              onClick={getUserLocation}
+              disabled={isLocating}
+            >
+              <FaLocationArrow />
+              {isLocating ? 'Updating...' : 'Refresh Location'}
+            </button>
+          </div>
         </div>
-      )}
-
-      {/* Footer */}
-      <footer className="app-footer">
-        <p className="footer-text">
-          Data: {data.data} • Map: OpenStreetMap
-        </p>
       </footer>
     </div>
   );
