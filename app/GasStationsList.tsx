@@ -37,7 +37,10 @@ import {
   FaCrown,
   FaTrophy,
   FaArrowRight,
-  FaExternalLinkAlt
+  FaExternalLinkAlt,
+  FaSun,
+  FaMoon,
+  FaAdjust
 } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -100,6 +103,34 @@ interface BestPriceInfo {
   stationName: string;
   type: FuelType;
 }
+
+// DarkModeToggle Component
+const DarkModeToggle: React.FC<{
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}> = ({ isDarkMode, toggleDarkMode }) => {
+  return (
+    <button
+      className="dark-mode-toggle"
+      onClick={toggleDarkMode}
+      aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      <div className="toggle-track">
+        <div className={`toggle-thumb ${isDarkMode ? 'dark' : 'light'}`}>
+          {isDarkMode ? (
+            <FaMoon className="toggle-icon" />
+          ) : (
+            <FaSun className="toggle-icon" />
+          )}
+        </div>
+      </div>
+      <span className="toggle-label">
+        {isDarkMode ? 'Dark' : 'Light'}
+      </span>
+    </button>
+  );
+};
 
 // Calculate distance
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -655,6 +686,7 @@ const ListViewSidebar: React.FC<{
   onPriceClick: (stationId: string) => void;
   onToggleSidebar?: () => void;
   isSidebarCollapsed?: boolean;
+  isDarkMode?: boolean;
 }> = ({
   sortBy,
   setSortBy,
@@ -671,7 +703,8 @@ const ListViewSidebar: React.FC<{
   selectedFuelType,
   onPriceClick,
   onToggleSidebar,
-  isSidebarCollapsed = false
+  isSidebarCollapsed = false,
+  isDarkMode = false
 }) => {
   return (
     <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -780,6 +813,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   const [searchedLocation, setSearchedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // Sorting states
   const [sortBy, setSortBy] = useState<SortOption>('distance');
@@ -834,12 +868,38 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    // Save preference to localStorage
+    localStorage.setItem('darkMode', (!isDarkMode).toString());
+  };
+
   // Initialize
   useEffect(() => {
     if (!initialUserLocation && !searchedLocation) {
       getUserLocation();
     }
+
+    // Check for saved dark mode preference
+    const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode) {
+      setIsDarkMode(savedDarkMode === 'true');
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(prefersDark);
+    }
   }, [getUserLocation, initialUserLocation, searchedLocation]);
+
+  // Apply dark mode class to body
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Validate data
   if (!data.ok || data.status !== 'ok' || !Array.isArray(data.stations)) {
@@ -1052,7 +1112,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   );
 
   return (
-    <div className="gas-stations-app-enhanced">
+    <div className={`gas-stations-app-enhanced ${isDarkMode ? 'dark' : ''}`}>
       {/* Top Navigation */}
       <nav className="app-nav">
         <div className="nav-left">
@@ -1071,21 +1131,27 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         </div>
         
         <div className="nav-right">
-          <div className="view-switch">
-            <button 
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              <FaList />
-              <span>List</span>
-            </button>
-            <button 
-              className={`view-btn ${viewMode === 'map' ? 'active' : ''}`}
-              onClick={() => setViewMode('map')}
-            >
-              <FaMap />
-              <span>Map</span>
-            </button>
+          <div className="nav-actions">
+            <DarkModeToggle 
+              isDarkMode={isDarkMode}
+              toggleDarkMode={toggleDarkMode}
+            />
+            <div className="view-switch">
+              <button 
+                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+              >
+                <FaList />
+                <span>List</span>
+              </button>
+              <button 
+                className={`view-btn ${viewMode === 'map' ? 'active' : ''}`}
+                onClick={() => setViewMode('map')}
+              >
+                <FaMap />
+                <span>Map</span>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -1355,6 +1421,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
               onPriceClick={handleBestPriceClick}
               onToggleSidebar={toggleSidebar}
               isSidebarCollapsed={isSidebarCollapsed}
+              isDarkMode={isDarkMode}
             />
 
             {/* List View Main Area */}
