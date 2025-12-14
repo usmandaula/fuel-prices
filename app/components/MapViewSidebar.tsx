@@ -1,0 +1,88 @@
+import React from 'react';
+import { FaFilter, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
+import { MapViewSidebarProps } from '../types/gasStationTypes';
+import ClickableStats from './ClickableStats';
+
+const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
+  sortBy,
+  setSortBy,
+  sortDirection,
+  setSortDirection,
+  showOnlyOpen,
+  setShowOnlyOpen,
+  priceFilter,
+  setPriceFilter,
+  openStationsCount,
+  sortedStationsLength,
+  averagePrice,
+  bestPrices,
+  selectedFuelType,
+  onPriceClick,
+  onToggleSidebar,
+  isSidebarCollapsed = false,
+  isDarkMode = false,
+  viewMode = 'map'
+}) => {
+  return (
+    <aside className={`app-sidebar map-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-header-top">
+          {onToggleSidebar && (
+            <button className="sidebar-toggle-btn" onClick={onToggleSidebar}>
+              {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+            </button>
+          )}
+          <h2>Map View</h2>
+        </div>
+        <div className="station-count">
+          <span className="count-number">{sortedStationsLength}</span>
+          <span className="count-label">stations visible</span>
+        </div>
+      </div>
+
+      <div className="quick-filters">
+        <div className="filter-group">
+          <label className="filter-label">Quick Filters:</label>
+          <div className="filter-options">
+            <button 
+              className={`filter-toggle ${showOnlyOpen ? 'active' : ''}`}
+              onClick={() => setShowOnlyOpen(!showOnlyOpen)}
+            >
+              <FaFilter />
+              <span>{showOnlyOpen ? 'Show All' : 'Open Now'} ({openStationsCount})</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="filter-group">
+          <label className="filter-label">Fuel Price Focus:</label>
+          <div className="price-buttons-simple">
+            {['all', 'diesel', 'e5', 'e10'].map((type) => (
+              <button
+                key={type}
+                className={`price-btn-simple ${priceFilter === type ? 'active' : ''}`}
+                onClick={() => setPriceFilter(type as any)}
+              >
+                {type === 'all' ? 'All Fuels' : type.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sidebar-footer">
+        <ClickableStats
+          bestPrices={bestPrices}
+          onPriceClick={onPriceClick}
+          openStationsCount={openStationsCount}
+          sortedStationsLength={sortedStationsLength}
+          averagePrice={averagePrice}
+          selectedFuelType={selectedFuelType}
+          isMapView={viewMode === 'map'}
+        />
+      </div>
+    </aside>
+  );
+};
+
+export default MapViewSidebar;
