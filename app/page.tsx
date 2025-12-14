@@ -1,13 +1,274 @@
-import React from 'react';
-import GasStationsList, { GasStationData } from './GasStationsList';
-import './GasStationsList.css'; // Import the CSS
+"use client"
+import React, { useState, useEffect, useCallback } from 'react';
+import GasStationsList from './GasStationsList';
+import './GasStationsList.css';
+import { fetchGasStations } from './services/gasStationService';
+
+// Default location (Berlin)
+const DEFAULT_LOCATION = {
+  lat: 52.521,
+  lng: 13.438,
+  name: 'Berlin, Germany'
+};
 
 const App: React.FC = () => {
-  const gasStationData: GasStationData = {"ok":true,"license":"CC BY 4.0 -  https:\/\/creativecommons.tankerkoenig.de","data":"MTS-K","status":"ok","stations":[{"id":"474e5046-deaf-4f9b-9a32-9797b778f047","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Margarete-Sommer-Str.","place":"Berlin","lat":52.530831,"lng":13.440946,"dist":1.1,"diesel":1.549,"e5":1.609,"e10":1.549,"isOpen":true,"houseNumber":"2","postCode":10407},{"id":"278130b1-e062-4a0f-80cc-19e486b4c024","name":"Aral Tankstelle","brand":"ARAL","street":"Holzmarktstra\u00dfe","place":"Berlin","lat":52.514153,"lng":13.421487,"dist":1.4,"diesel":1.569,"e5":1.639,"e10":1.579,"isOpen":true,"houseNumber":"12\/14","postCode":10179},{"id":"1c4f126b-1f3c-4b38-9692-05c400ea8e61","name":"Sprint Berlin Kniprodestr.","brand":"Sprint","street":"Kniprodestr.","place":"Berlin","lat":52.53389,"lng":13.444949,"dist":1.5,"diesel":1.539,"e5":1.599,"e10":1.539,"isOpen":true,"houseNumber":"25","postCode":10407},{"id":"38e0e779-b0f1-46ae-a35b-09f8e37024a1","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Storkower Str.","place":"Berlin","lat":52.52744,"lng":13.457798,"dist":1.5,"diesel":1.549,"e5":1.609,"e10":1.549,"isOpen":true,"houseNumber":"174","postCode":10369},{"id":"94e70fc4-b22f-4e5a-877f-bc1082cdae81","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Prenzlauer Allee","place":"Berlin","lat":52.528899,"lng":13.41808,"dist":1.6,"diesel":1.549,"e5":1.609,"e10":1.549,"isOpen":true,"houseNumber":"1-4","postCode":10405},{"id":"51d4b6a9-a095-1aa0-e100-80009459e03a","name":"JET BERLIN STORKOWER STR. 126-130","brand":"JET","street":"STORKOWER STR.","place":"BERLIN","lat":52.534,"lng":13.45219,"dist":1.7,"diesel":1.539,"e5":1.599,"e10":1.539,"isOpen":true,"houseNumber":"126-130","postCode":10407},{"id":"579d25fd-acb9-445a-9494-f7fe0fa7ce4a","name":"Elan Berlin","brand":"ELAN","street":"Storkower Str.","place":"Berlin","lat":52.535342,"lng":13.450748,"dist":1.8,"diesel":1.539,"e5":1.599,"e10":1.539,"isOpen":true,"houseNumber":"116","postCode":10407},{"id":"1723edea-8e01-4de3-8c5e-ca227a49e2c3","name":"Shell Berlin Skalitzer Str. 48","brand":"Shell","street":"Skalitzer Str.","place":"Berlin","lat":52.499217,"lng":13.433074,"dist":2.4,"diesel":1.549,"e5":1.649,"e10":1.589,"isOpen":true,"houseNumber":"48","postCode":10997},{"id":"448e4ee6-3404-4868-b7e6-ea59a5c78eb9","name":"Aral Tankstelle","brand":"ARAL","street":"Skalitzer Stra\u00dfe","place":"Berlin","lat":52.498703,"lng":13.422538,"dist":2.7,"diesel":1.579,"e5":1.709,"e10":1.649,"isOpen":true,"houseNumber":"26","postCode":10999},{"id":"594eafdd-3537-45ae-8bf0-d667aaa25454","name":"Shell Berlin Oranienstr. 138","brand":"Shell","street":"Oranienstr.","place":"Berlin","lat":52.504122,"lng":13.408138,"dist":2.8,"diesel":1.539,"e5":1.659,"e10":1.599,"isOpen":true,"houseNumber":"138","postCode":10969},{"id":"c1d9c3c2-a6de-4111-8e63-81bee1189b50","name":"Aral Tankstelle","brand":"ARAL","street":"Vor dem Schlesischen Tor","place":"Berlin","lat":52.496857,"lng":13.449614,"dist":2.8,"diesel":1.559,"e5":1.629,"e10":1.569,"isOpen":true,"houseNumber":"","postCode":10997},{"id":"813ed58c-b58d-4d17-895b-2078cb302649","name":"Aral Tankstelle","brand":"ARAL","street":"Prinzenstra\u00dfe","place":"Berlin","lat":52.501896,"lng":13.409839,"dist":2.9,"diesel":1.529,"e5":1.629,"e10":1.569,"isOpen":true,"houseNumber":"29","postCode":10969},{"id":"51d4b660-a095-1aa0-e100-80009459e03a","name":"JET BERLIN HERZBERGSTR. 27","brand":"JET","street":"HERZBERGSTR.","place":"BERLIN","lat":52.52643,"lng":13.48864,"dist":3.5,"diesel":1.539,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"27","postCode":10365},{"id":"a0f35e83-2d97-4bfb-b90e-f068fe8c73e1","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Indira-Gandhi-Str.","place":"Berlin","lat":52.547499,"lng":13.46808,"dist":3.6,"diesel":1.549,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"106-109","postCode":13053},{"id":"8953fadc-921c-4040-959c-4c6bde9d9eae","name":"Shell Berlin Buchberger Str. 30","brand":"Shell","street":"Buchberger Str.","place":"Berlin","lat":52.507044,"lng":13.485837,"dist":3.6,"diesel":1.549,"e5":1.609,"e10":1.569,"isOpen":true,"houseNumber":"30","postCode":10365},{"id":"d40ad39a-73ba-476f-af0f-d8cfe3046dd7","name":"Aral Tankstelle","brand":"ARAL","street":"Brunnenstra\u00dfe","place":"Berlin","lat":52.540787,"lng":13.393457,"dist":3.7,"diesel":1.569,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"119","postCode":13355},{"id":"c9dc3f9b-e10a-47b4-a3fe-451b2cb1daad","name":"Aral Tankstelle","brand":"ARAL","street":"Frankfurter Allee","place":"Berlin","lat":52.51144,"lng":13.493861,"dist":3.9,"diesel":1.569,"e5":1.659,"e10":1.599,"isOpen":true,"houseNumber":"214","postCode":10365},{"id":"67978117-35b5-4089-a53a-9121ccfbb653","name":"Sprint Berlin Reuter Str.","brand":"Sprint","street":"Reuter Str.","place":"Berlin","lat":52.48449,"lng":13.429329,"dist":4.1,"diesel":1.539,"e5":1.629,"e10":1.569,"isOpen":true,"houseNumber":"18-19","postCode":12043},{"id":"51d4b477-a095-1aa0-e100-80009459e03a","name":"JET BERLIN SIEGFRIEDSTR. 179","brand":"JET","street":"SIEGFRIEDSTR.","place":"BERLIN","lat":52.52139,"lng":13.49912,"dist":4.1,"diesel":1.539,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"179","postCode":10365},{"id":"005056ba-7cb6-1ed2-bceb-8e5fec1a0d35","name":"star Tankstelle","brand":"STAR","street":"Siegfriedstra\u00dfe","place":"Berlin","lat":52.524395,"lng":13.499269,"dist":4.2,"diesel":1.539,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"170","postCode":10365},{"id":"7d8ba49c-b9ec-4672-b76f-251b3065b9af","name":"Elan Berlin","brand":"ELAN","street":"Tino-Schwierzina-Str.","place":"Berlin","lat":52.558409,"lng":13.432754,"dist":4.2,"diesel":1.559,"e5":1.609,"e10":1.549,"isOpen":true,"houseNumber":"37","postCode":13089},{"id":"0591a60a-a167-4cc5-a200-c21d4a1e698e","name":"Shell Berlin Berliner Str. 83","brand":"Shell","street":"Berliner Str.","place":"Berlin","lat":52.556313,"lng":13.41506,"dist":4.2,"diesel":1.549,"e5":1.599,"e10":1.559,"isOpen":false,"houseNumber":"83","postCode":13189},{"id":"51d4b4cf-a095-1aa0-e100-80009459e03a","name":"JET BERLIN PRENZLAUER PROMENADE 42 A","brand":"JET","street":"PRENZLAUER PROMENADE","place":"BERLIN","lat":52.55961,"lng":13.42878,"dist":4.3,"diesel":1.539,"e5":1.609,"e10":1.549,"isOpen":true,"houseNumber":"42 A","postCode":13089},{"id":"c3e4c888-767d-471e-bd5e-760eabc116c2","name":"Aral Tankstelle","brand":"ARAL","street":"Sonnenallee","place":"Berlin","lat":52.48148,"lng":13.44137,"dist":4.4,"diesel":1.569,"e5":1.659,"e10":1.599,"isOpen":true,"houseNumber":"113","postCode":12045},{"id":"33abf29f-9c16-4abf-a1b2-409476b42f97","name":"Esso Tankstelle","brand":"ESSO","street":"GNEISENAUSTR. 104-106","place":"BERLIN","lat":52.492719,"lng":13.390687,"dist":4.5,"diesel":1.549,"e5":1.639,"e10":1.579,"isOpen":true,"houseNumber":"","postCode":10961},{"id":"cba00de3-9841-49ce-943c-0bcded76ba18","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Chausseestr.","place":"Berlin","lat":52.537242,"lng":13.375376,"dist":4.6,"diesel":1.569,"e5":1.619,"e10":1.559,"isOpen":true,"houseNumber":"61-62","postCode":10115},{"id":"5b24dba1-c64c-4480-9943-ac3f23e43912","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Tempelhofer Ufer","place":"Berlin","lat":52.500478,"lng":13.376696,"dist":4.7,"diesel":1.539,"e5":1.659,"e10":1.599,"isOpen":true,"houseNumber":"33-35","postCode":10963},{"id":"005056ba-7cb6-1ee5-a8e8-3d3efcc90710","name":"star Tankstelle","brand":"STAR","street":"Berliner Allee","place":"Berlin","lat":52.560806,"lng":13.467082,"dist":4.8,"diesel":1.509,"e5":1.559,"e10":1.519,"isOpen":true,"houseNumber":"257","postCode":13088},{"id":"8a027639-18de-4314-93e1-224c4cf6b634","name":"JET BERLIN ROMAIN-ROLLAND-STR. 13","brand":"JET","street":"ROMAIN-ROLLAND-STR.","place":"BERLIN","lat":52.56453,"lng":13.44722,"dist":4.9,"diesel":1.539,"e5":1.589,"e10":1.529,"isOpen":true,"houseNumber":"13","postCode":13089},{"id":"88641cd8-5ece-473d-8b04-7a0b06ee8a2e","name":"Shell Berlin Juelicher Str. 1","brand":"Shell","street":"Juelicher Str.","place":"Berlin","lat":52.554854,"lng":13.391877,"dist":4.9,"diesel":1.559,"e5":1.599,"e10":1.539,"isOpen":true,"houseNumber":"1","postCode":13357},{"id":"e1a15081-25ce-9107-e040-0b0a3dfe563c","name":"Berlin, Romain-Rolland Str. 2","brand":"HEM","street":"Romain-Rolland-Str.","place":"Berlin","lat":52.564815,"lng":13.448848,"dist":4.9,"diesel":1.539,"e5":1.589,"e10":1.549,"isOpen":true,"houseNumber":"2","postCode":13089},{"id":"51863198-2987-48b8-aa2e-dd949bc403dc","name":"TotalEnergies Berlin","brand":"TotalEnergies","street":"Bulgarische Str.","place":"Berlin","lat":52.483773,"lng":13.478669,"dist":5,"diesel":1.549,"e5":1.639,"e10":1.589,"isOpen":true,"houseNumber":"9","postCode":12435}]};
+  const [gasStationData, setGasStationData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name: string }>(DEFAULT_LOCATION);
+  const [radius, setRadius] = useState<number>(5); // Default radius in km
 
+  // Function to fetch gas station data
+  const fetchGasStationsData = useCallback(async (lat: number, lng: number, radius: number, locationName: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`Fetching gas stations for: ${lat}, ${lng} with radius ${radius}km`);
+      
+      // Use the API service to fetch data
+      const data = await fetchGasStations(lat, lng, radius);
+      
+      console.log('Data fetched successfully:', data);
+      setGasStationData(data);
+      setUserLocation({ lat, lng, name: locationName });
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('lastGasStationSearch', JSON.stringify({
+        lat,
+        lng,
+        name: locationName,
+        radius,
+        timestamp: Date.now()
+      }));
+      
+    } catch (err) {
+      console.error('Error fetching gas stations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch gas station data. Please try again.');
+      
+      // Try to load cached data as fallback
+      const cached = localStorage.getItem('gasStationsCache');
+      if (cached) {
+        try {
+          const cachedData = JSON.parse(cached);
+          console.log('Using cached data as fallback');
+          setGasStationData(cachedData);
+        } catch (cacheError) {
+          console.error('Error parsing cached data:', cacheError);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Function to get user's current location
+  const getCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name);
+      return;
+    }
+
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        fetchGasStationsData(latitude, longitude, radius, 'Your Current Location');
+      },
+      (error) => {
+        console.warn('Geolocation error:', error);
+        // Fallback to default location
+        fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }, [fetchGasStationsData, radius]);
+
+  // Handle location search from child component
+  const handleLocationSearch = (location: { lat: number; lng: number; name: string }) => {
+    fetchGasStationsData(location.lat, location.lng, radius, location.name);
+  };
+
+  // Handle radius change
+  const handleRadiusChange = (newRadius: number) => {
+    setRadius(newRadius);
+    if (userLocation) {
+      fetchGasStationsData(userLocation.lat, userLocation.lng, newRadius, userLocation.name);
+    }
+  };
+
+  // Refresh data
+  const refreshData = () => {
+    if (userLocation) {
+      fetchGasStationsData(userLocation.lat, userLocation.lng, radius, userLocation.name);
+    }
+  };
+
+  // Initialize on component mount
+  useEffect(() => {
+    // Check for saved location
+    const savedSearch = localStorage.getItem('lastGasStationSearch');
+    if (savedSearch) {
+      try {
+        const { lat, lng, name, radius: savedRadius } = JSON.parse(savedSearch);
+        if (savedRadius) setRadius(savedRadius);
+        fetchGasStationsData(lat, lng, savedRadius || radius, name);
+        return;
+      } catch (e) {
+        console.error('Error parsing saved search:', e);
+      }
+    }
+    
+    // Try to get current location or use default
+    getCurrentLocation();
+  }, []);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <h2>Loading Gas Stations</h2>
+        <p>Fetching the latest fuel prices in your area...</p>
+        <p className="loading-details">
+          Searching within {radius}km of {userLocation.name}
+        </p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !gasStationData) {
+    return (
+      <div className="error-container">
+        <div className="error-content">
+          <h2>Unable to Load Data</h2>
+          <p>{error}</p>
+          <div className="error-actions">
+            <button 
+              className="retry-btn"
+              onClick={getCurrentLocation}
+            >
+              Try with Current Location
+            </button>
+            <button 
+              className="default-btn"
+              onClick={() => fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name)}
+            >
+              Use Berlin, Germany
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render main app
   return (
     <div className="App">
-      <GasStationsList data={gasStationData} />
+      {/* Header Controls */}
+      <div className="app-header-controls">
+        <div className="header-left">
+          <h1 className="app-title">
+            <span className="fuel-icon">⛽</span>
+            FuelFinder
+            <span className="beta-badge">BETA</span>
+          </h1>
+          {userLocation && (
+            <div className="location-info">
+              <span className="location-name">{userLocation.name}</span>
+              <span className="location-coords">
+                ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
+              </span>
+            </div>
+          )}
+        </div>
+        
+        <div className="header-right">
+          <div className="radius-selector">
+            <label>Search Radius: {radius}km</label>
+            <div className="radius-buttons">
+              {[1, 3, 5, 10, 15, 25].map((r) => (
+                <button
+                  key={r}
+                  className={`radius-btn ${radius === r ? 'active' : ''}`}
+                  onClick={() => handleRadiusChange(r)}
+                >
+                  {r}km
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="action-buttons">
+            <button 
+              className="action-btn refresh-btn"
+              onClick={refreshData}
+              title="Refresh prices"
+            >
+              🔄 Refresh
+            </button>
+            <button 
+              className="action-btn location-btn"
+              onClick={getCurrentLocation}
+              title="Use current location"
+            >
+              📍 My Location
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      {gasStationData && (
+        <GasStationsList 
+          data={gasStationData} 
+          initialUserLocation={userLocation}
+          onLocationSearch={handleLocationSearch}
+        />
+      )}
+
+      {/* Footer */}
+      <div className="app-footer">
+        <div className="footer-content">
+          <div className="data-info">
+            {gasStationData && (
+              <>
+                <span className="data-source">
+                  Data: {gasStationData.license || 'Tankerkönig API'}
+                </span>
+                <span className="data-status">
+                  Status: {gasStationData.status === 'ok' ? '✅ Live' : '⚠️ Limited'}
+                </span>
+                <span className="stations-count">
+                  Stations: {gasStationData.stations?.length || 0} found
+                </span>
+              </>
+            )}
+          </div>
+          <div className="footer-actions">
+            <button 
+              className="footer-btn"
+              onClick={refreshData}
+            >
+              Refresh Prices
+            </button>
+            <a 
+              href="https://creativecommons.tankerkoenig.de/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="footer-btn"
+            >
+              API Info
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

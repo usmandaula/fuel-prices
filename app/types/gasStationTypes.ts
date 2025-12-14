@@ -122,3 +122,8 @@ export interface StationCardProps {
   selectedFuelType?: 'all' | 'diesel' | 'e5' | 'e10';
   scrollToStation?: (stationId: string) => void;
 }
+export interface GasStationsListProps {
+  data: GasStationData;
+  initialUserLocation?: { lat: number; lng: number; name?: string };
+  onLocationSearch?: (location: { lat: number; lng: number; name: string }) => void;
+}

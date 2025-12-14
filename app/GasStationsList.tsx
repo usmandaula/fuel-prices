@@ -108,7 +108,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
  */
 const GasStationsList: React.FC<GasStationsListProps> = ({ 
   data, 
-  initialUserLocation 
+  initialUserLocation,
+    onLocationSearch 
+ 
 }) => {
   // ========================================================
   // STATE MANAGEMENT
@@ -177,12 +179,17 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
     );
   }, []);
 
-  /**
+   /**
    * Handles location search results
    */
   const handleLocationFound = (location: { lat: number; lng: number; name: string }) => {
     setSearchedLocation(location);
     setUserLocation(location);
+    
+    // Notify parent component about the search
+    if (onLocationSearch) {
+      onLocationSearch(location);
+    }
   };
 
   /**
