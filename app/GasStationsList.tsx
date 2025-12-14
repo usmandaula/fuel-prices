@@ -776,16 +776,18 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
         <div className="filter-group">
           <label className="filter-label">Sort by:</label>
           <div className="sort-options">
-            {['Distance', 'Price_Diesel', 'Price_E5', 'Price_E10', 'Name', 'Rating'].map((option) => (
+            {/* {['Distance', 'Price_Diesel', 'Price_E5', 'Price_E10', 'Name', 'Rating'].map((option) => ( */}
+            {['distance', 'price_diesel', 'price_e5', 'price_e10'].map((option) => (
+          
               <button
                 key={option}
                 className={`sort-option ${sortBy === option ? 'active' : ''}`}
                 onClick={() => setSortBy(option as SortOption)}
               >
-                {option === 'Distance' && <FaRuler />}
-                {option.startsWith('Price_') && <FaMoneyBillWave />}
-                {option === 'Name' && <FaGasPump />}
-                {option === 'Rating' && <FaStar />}
+                {option === 'distance' && <FaRuler />}
+                {option.startsWith('price_') && <FaMoneyBillWave />}
+                {/* {option === 'Name' && <FaGasPump />}
+                {option === 'Rating' && <FaStar />} */}
                 <span>{option.replace('_', ' ')}</span>
               </button>
             ))}
