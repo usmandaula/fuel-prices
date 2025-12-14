@@ -90,6 +90,60 @@ interface GasStationsListProps {
   data: GasStationData;
   initialUserLocation?: { lat: number; lng: number };
 }
+// Update the ListViewSidebar interface (around line 586):
+interface ListViewSidebarProps {
+  sortBy: SortOption;
+  setSortBy: (option: SortOption) => void;
+  sortDirection: SortDirection;
+  setSortDirection: (direction: SortDirection) => void;
+  showOnlyOpen: boolean;
+  setShowOnlyOpen: (value: boolean) => void;
+  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
+  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
+  openStationsCount: number;
+  sortedStationsLength: number;
+  averagePrice: string;
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
+  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
+  onPriceClick: (stationId: string, fuelType?: FuelType) => void; // Updated
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
+  isDarkMode?: boolean;
+  viewMode?: 'list' | 'map'; // Add this
+}
+
+// Update the MapViewSidebar interface (around line 718):
+// Update MapViewSidebarProps to include all the sorting props:
+interface MapViewSidebarProps {
+  sortBy: SortOption;
+  setSortBy: (option: SortOption) => void;
+  sortDirection: SortDirection;
+  setSortDirection: (direction: SortDirection) => void;
+  showOnlyOpen: boolean;
+  setShowOnlyOpen: (value: boolean) => void;
+  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
+  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
+  openStationsCount: number;
+  sortedStationsLength: number;
+  averagePrice: string;
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
+  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
+  onPriceClick: (stationId: string, fuelType?: FuelType) => void;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
+  isDarkMode?: boolean;
+  viewMode?: 'list' | 'map';
+}
 
 // Sorting types
 type SortOption = 'distance' | 'price_diesel' | 'price_e5' | 'price_e10' | 'name' | 'rating' | 'best_price';
@@ -103,7 +157,20 @@ interface BestPriceInfo {
   stationName: string;
   type: FuelType;
 }
-
+interface ClickableStatsProps {
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
+  onPriceClick: (stationId: string, fuelType?: FuelType) => void;
+  openStationsCount: number;
+  sortedStationsLength: number;
+  averagePrice: string;
+  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
+  isMapView?: boolean;
+}
 // DarkModeToggle Component
 const DarkModeToggle: React.FC<{
   isDarkMode: boolean;
@@ -567,19 +634,15 @@ const MapControls: React.FC<{
 };
 
 // Stats component with clickable best prices
-const ClickableStats: React.FC<{
-  bestPrices: {
-    diesel: BestPriceInfo | null;
-    e5: BestPriceInfo | null;
-    e10: BestPriceInfo | null;
-    overall: BestPriceInfo | null;
-  };
-  onPriceClick: (stationId: string) => void;
-  openStationsCount: number;
-  sortedStationsLength: number;
-  averagePrice: string;
-  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
-}> = ({ bestPrices, onPriceClick, openStationsCount, sortedStationsLength, averagePrice, selectedFuelType }) => {
+const ClickableStats: React.FC<ClickableStatsProps> = ({
+  bestPrices,
+  onPriceClick,
+  openStationsCount,
+  sortedStationsLength,
+  averagePrice,
+  selectedFuelType,
+  isMapView = false
+}) => {
   return (
     <div className="stats-grid">
       <div className="stat-item">
@@ -592,11 +655,12 @@ const ClickableStats: React.FC<{
         <div className="stat-label">Avg Price</div>
       </div>
       
-      {/* Diesel Best Price - Clickable */}
       <div 
         className={`stat-item clickable-stat ${selectedFuelType === 'diesel' ? 'active' : ''}`}
-        onClick={() => bestPrices.diesel && onPriceClick(bestPrices.diesel.stationId)}
-        title={bestPrices.diesel ? `Click to view ${bestPrices.diesel.stationName}` : 'No best price available'}
+        onClick={() => bestPrices.diesel && onPriceClick(bestPrices.diesel.stationId, 'diesel')}
+        title={bestPrices.diesel ? 
+          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.diesel.stationName}` : 
+          'No best price available'}
       >
         <div className="stat-value">
           {bestPrices.diesel ? (
@@ -609,11 +673,12 @@ const ClickableStats: React.FC<{
         <div className="stat-label">Best Diesel</div>
       </div>
       
-      {/* E5 Best Price - Clickable */}
       <div 
         className={`stat-item clickable-stat ${selectedFuelType === 'e5' ? 'active' : ''}`}
-        onClick={() => bestPrices.e5 && onPriceClick(bestPrices.e5.stationId)}
-        title={bestPrices.e5 ? `Click to view ${bestPrices.e5.stationName}` : 'No best price available'}
+        onClick={() => bestPrices.e5 && onPriceClick(bestPrices.e5.stationId, 'e5')}
+        title={bestPrices.e5 ? 
+          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.e5.stationName}` : 
+          'No best price available'}
       >
         <div className="stat-value">
           {bestPrices.e5 ? (
@@ -626,11 +691,12 @@ const ClickableStats: React.FC<{
         <div className="stat-label">Best E5</div>
       </div>
       
-      {/* E10 Best Price - Clickable */}
       <div 
         className={`stat-item clickable-stat ${selectedFuelType === 'e10' ? 'active' : ''}`}
-        onClick={() => bestPrices.e10 && onPriceClick(bestPrices.e10.stationId)}
-        title={bestPrices.e10 ? `Click to view ${bestPrices.e10.stationName}` : 'No best price available'}
+        onClick={() => bestPrices.e10 && onPriceClick(bestPrices.e10.stationId, 'e10')}
+        title={bestPrices.e10 ? 
+          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.e10.stationName}` : 
+          'No best price available'}
       >
         <div className="stat-value">
           {bestPrices.e10 ? (
@@ -643,11 +709,12 @@ const ClickableStats: React.FC<{
         <div className="stat-label">Best E10</div>
       </div>
       
-      {/* Overall Best Price - Clickable */}
       <div 
         className={`stat-item clickable-stat ${selectedFuelType === 'all' ? 'active' : ''}`}
-        onClick={() => bestPrices.overall && onPriceClick(bestPrices.overall.stationId)}
-        title={bestPrices.overall ? `Click to view ${bestPrices.overall.stationName}` : 'No best price available'}
+        onClick={() => bestPrices.overall && onPriceClick(bestPrices.overall.stationId, bestPrices.overall.type)}
+        title={bestPrices.overall ? 
+          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.overall.stationName}` : 
+          'No best price available'}
       >
         <div className="stat-value">
           {bestPrices.overall ? (
@@ -663,31 +730,11 @@ const ClickableStats: React.FC<{
   );
 };
 
+
 // Sidebar for list view (shows only filters, no station cards)
-const ListViewSidebar: React.FC<{
-  sortBy: SortOption;
-  setSortBy: (option: SortOption) => void;
-  sortDirection: SortDirection;
-  setSortDirection: (direction: SortDirection) => void;
-  showOnlyOpen: boolean;
-  setShowOnlyOpen: (value: boolean) => void;
-  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
-  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
-  openStationsCount: number;
-  sortedStationsLength: number;
-  averagePrice: string;
-  bestPrices: {
-    diesel: BestPriceInfo | null;
-    e5: BestPriceInfo | null;
-    e10: BestPriceInfo | null;
-    overall: BestPriceInfo | null;
-  };
-  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
-  onPriceClick: (stationId: string) => void;
-  onToggleSidebar?: () => void;
-  isSidebarCollapsed?: boolean;
-  isDarkMode?: boolean;
-}> = ({
+// REPLACE the entire ListViewSidebar component (lines 587-620) with:
+
+const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
   sortBy,
   setSortBy,
   sortDirection,
@@ -704,7 +751,8 @@ const ListViewSidebar: React.FC<{
   onPriceClick,
   onToggleSidebar,
   isSidebarCollapsed = false,
-  isDarkMode = false
+  isDarkMode = false,
+  viewMode = 'list'
 }) => {
   return (
     <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -728,16 +776,16 @@ const ListViewSidebar: React.FC<{
         <div className="filter-group">
           <label className="filter-label">Sort by:</label>
           <div className="sort-options">
-            {['distance', 'price_diesel', 'price_e5', 'price_e10', 'name', 'rating'].map((option) => (
+            {['Distance', 'Price_Diesel', 'Price_E5', 'Price_E10', 'Name', 'Rating'].map((option) => (
               <button
                 key={option}
                 className={`sort-option ${sortBy === option ? 'active' : ''}`}
                 onClick={() => setSortBy(option as SortOption)}
               >
-                {option === 'distance' && <FaRuler />}
-                {option.startsWith('price_') && <FaMoneyBillWave />}
-                {option === 'name' && <FaGasPump />}
-                {option === 'rating' && <FaStar />}
+                {option === 'Distance' && <FaRuler />}
+                {option.startsWith('Price_') && <FaMoneyBillWave />}
+                {option === 'Name' && <FaGasPump />}
+                {option === 'Rating' && <FaStar />}
                 <span>{option.replace('_', ' ')}</span>
               </button>
             ))}
@@ -799,37 +847,17 @@ const ListViewSidebar: React.FC<{
           sortedStationsLength={sortedStationsLength}
           averagePrice={averagePrice}
           selectedFuelType={selectedFuelType}
+          isMapView={viewMode === 'map'}
         />
       </div>
     </aside>
   );
 };
 
-// Map View Sidebar (Only filters, no station list)
-const MapViewSidebar: React.FC<{
-  sortBy: SortOption;
-  setSortBy: (option: SortOption) => void;
-  sortDirection: SortDirection;
-  setSortDirection: (direction: SortDirection) => void;
-  showOnlyOpen: boolean;
-  setShowOnlyOpen: (value: boolean) => void;
-  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
-  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
-  openStationsCount: number;
-  sortedStationsLength: number;
-  averagePrice: string;
-  bestPrices: {
-    diesel: BestPriceInfo | null;
-    e5: BestPriceInfo | null;
-    e10: BestPriceInfo | null;
-    overall: BestPriceInfo | null;
-  };
-  selectedFuelType: 'all' | 'diesel' | 'e5' | 'e10';
-  onPriceClick: (stationId: string) => void;
-  onToggleSidebar?: () => void;
-  isSidebarCollapsed?: boolean;
-  isDarkMode?: boolean;
-}> = ({
+// Map View Sidebar (Only essential filters, no station list)
+// REPLACE the entire MapViewSidebar component (lines 722-800) with:
+
+const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
   sortBy,
   setSortBy,
   sortDirection,
@@ -846,7 +874,8 @@ const MapViewSidebar: React.FC<{
   onPriceClick,
   onToggleSidebar,
   isSidebarCollapsed = false,
-  isDarkMode = false
+  isDarkMode = false,
+  viewMode = 'map'
 }) => {
   return (
     <aside className={`app-sidebar map-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -857,78 +886,42 @@ const MapViewSidebar: React.FC<{
               {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
             </button>
           )}
-          <h2>Map Filters</h2>
+          <h2>Map View</h2>
         </div>
         <div className="station-count">
           <span className="count-number">{sortedStationsLength}</span>
-          <span className="count-label">stations</span>
+          <span className="count-label">stations visible</span>
         </div>
       </div>
 
-      {/* Quick Filters */}
+      {/* Simplified Filters - Only essential for map view */}
       <div className="quick-filters">
         <div className="filter-group">
-          <label className="filter-label">Sort by:</label>
-          <div className="sort-options">
-            {['distance', 'price_diesel', 'price_e5', 'price_e10', 'name', 'rating'].map((option) => (
-              <button
-                key={option}
-                className={`sort-option ${sortBy === option ? 'active' : ''}`}
-                onClick={() => setSortBy(option as SortOption)}
-              >
-                {option === 'distance' && <FaRuler />}
-                {option.startsWith('price_') && <FaMoneyBillWave />}
-                {option === 'name' && <FaGasPump />}
-                {option === 'rating' && <FaStar />}
-                <span>{option.replace('_', ' ')}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-group">
-          <label className="filter-label">Filters:</label>
+          <label className="filter-label">Quick Filters:</label>
           <div className="filter-options">
             <button 
               className={`filter-toggle ${showOnlyOpen ? 'active' : ''}`}
               onClick={() => setShowOnlyOpen(!showOnlyOpen)}
             >
               <FaFilter />
-              <span>Open Now ({openStationsCount})</span>
+              <span>{showOnlyOpen ? 'Show All' : 'Open Now'} ({openStationsCount})</span>
             </button>
-            
-            <div className="price-filter">
-              <span className="filter-label">Fuel Type:</span>
-              <div className="price-buttons">
-                {['all', 'diesel', 'e5', 'e10'].map((type) => (
-                  <button
-                    key={type}
-                    className={`price-btn ${priceFilter === type ? 'active' : ''}`}
-                    onClick={() => setPriceFilter(type as any)}
-                  >
-                    {type === 'all' ? 'All' : type.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
-        <div className="sort-direction">
-          <button 
-            className={`direction-btn ${sortDirection === 'low_to_high' ? 'active' : ''}`}
-            onClick={() => setSortDirection('low_to_high')}
-          >
-            <FaSortAmountDown />
-            <span>Low to High</span>
-          </button>
-          <button 
-            className={`direction-btn ${sortDirection === 'high_to_low' ? 'active' : ''}`}
-            onClick={() => setSortDirection('high_to_low')}
-          >
-            <FaSortAmountUp />
-            <span>High to Low</span>
-          </button>
+        <div className="filter-group">
+          <label className="filter-label">Fuel Price Focus:</label>
+          <div className="price-buttons-simple">
+            {['all', 'diesel', 'e5', 'e10'].map((type) => (
+              <button
+                key={type}
+                className={`price-btn-simple ${priceFilter === type ? 'active' : ''}`}
+                onClick={() => setPriceFilter(type as any)}
+              >
+                {type === 'all' ? 'All Fuels' : type.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -941,12 +934,12 @@ const MapViewSidebar: React.FC<{
           sortedStationsLength={sortedStationsLength}
           averagePrice={averagePrice}
           selectedFuelType={selectedFuelType}
+          isMapView={viewMode === 'map'}
         />
       </div>
     </aside>
   );
 };
-
 // Main component
 const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLocation }) => {
   const [selectedStation, setSelectedStation] = useState<GasStation | null>(null);
@@ -1253,9 +1246,42 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
   }, [sortedStations, viewMode]);
 
   // Handle best price click
-  const handleBestPriceClick = useCallback((stationId: string) => {
-    scrollToStation(stationId);
-  }, [scrollToStation]);
+// Replace the current handleBestPriceClick function with this:
+
+const handleBestPriceClick = useCallback((stationId: string, fuelType?: FuelType) => {
+  const station = sortedStations.find(s => s.id === stationId);
+  if (!station) return;
+
+  setSelectedStation(station);
+
+  if (viewMode === 'list') {
+    // List view behavior
+    const element = document.getElementById(`station-${stationId}`);
+    if (element) {
+      element.classList.add('highlighted');
+      setTimeout(() => element.classList.remove('highlighted'), 2000);
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  } else {
+    // Map view behavior - fly to station
+    const flyToEvent = new CustomEvent('flyToStation', {
+      detail: {
+        lat: station.lat,
+        lng: station.lng,
+        stationId: station.id,
+        fuelType: fuelType
+      }
+    });
+    window.dispatchEvent(flyToEvent);
+    
+    // Optional: Add a visual indicator
+    const stationElement = document.getElementById(`station-${stationId}`);
+    if (stationElement) {
+      stationElement.classList.add('highlighted');
+      setTimeout(() => stationElement.classList.remove('highlighted'), 3000);
+    }
+  }
+}, [sortedStations, viewMode]);
 
   // Statistics
   const openStationsCount = useMemo(() => 
@@ -1321,25 +1347,27 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
           // Map View Layout
           <>
             {/* Map View Sidebar (Filters only, NO station cards) */}
-            <MapViewSidebar
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              sortDirection={sortDirection}
-              setSortDirection={setSortDirection}
-              showOnlyOpen={showOnlyOpen}
-              setShowOnlyOpen={setShowOnlyOpen}
-              priceFilter={priceFilter}
-              setPriceFilter={setPriceFilter}
-              openStationsCount={openStationsCount}
-              sortedStationsLength={sortedStations.length}
-              averagePrice={averagePrice}
-              bestPrices={bestPrices}
-              selectedFuelType={priceFilter}
-              onPriceClick={handleBestPriceClick}
-              onToggleSidebar={toggleSidebar}
-              isSidebarCollapsed={isSidebarCollapsed}
-              isDarkMode={isDarkMode}
-            />
+      <MapViewSidebar
+  sortBy={sortBy}
+  setSortBy={setSortBy}
+  sortDirection={sortDirection}
+  setSortDirection={setSortDirection}
+  showOnlyOpen={showOnlyOpen}
+  setShowOnlyOpen={setShowOnlyOpen}
+  priceFilter={priceFilter}
+  setPriceFilter={setPriceFilter}
+  openStationsCount={openStationsCount}
+  sortedStationsLength={sortedStations?.length || 0}
+  averagePrice={averagePrice}
+  bestPrices={bestPrices}
+  selectedFuelType={priceFilter}
+  onPriceClick={handleBestPriceClick} // Just pass the function
+  onToggleSidebar={toggleSidebar}
+  isSidebarCollapsed={isSidebarCollapsed}
+  isDarkMode={isDarkMode}
+  viewMode={viewMode} // Add this
+/>
+
 
             {/* Map Area */}
             <div className="app-map-area">
@@ -1470,24 +1498,26 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
           <>
             {/* List View Sidebar (Filters only, no station cards) */}
             <ListViewSidebar
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              sortDirection={sortDirection}
-              setSortDirection={setSortDirection}
-              showOnlyOpen={showOnlyOpen}
-              setShowOnlyOpen={setShowOnlyOpen}
-              priceFilter={priceFilter}
-              setPriceFilter={setPriceFilter}
-              openStationsCount={openStationsCount}
-              sortedStationsLength={sortedStations.length}
-              averagePrice={averagePrice}
-              bestPrices={bestPrices}
-              selectedFuelType={priceFilter}
-              onPriceClick={handleBestPriceClick}
-              onToggleSidebar={toggleSidebar}
-              isSidebarCollapsed={isSidebarCollapsed}
-              isDarkMode={isDarkMode}
-            />
+  sortBy={sortBy}
+  setSortBy={setSortBy}
+  sortDirection={sortDirection}
+  setSortDirection={setSortDirection}
+  showOnlyOpen={showOnlyOpen}
+  setShowOnlyOpen={setShowOnlyOpen}
+  priceFilter={priceFilter}
+  setPriceFilter={setPriceFilter}
+  openStationsCount={openStationsCount}
+  sortedStationsLength={sortedStations?.length || 0}
+  averagePrice={averagePrice}
+  bestPrices={bestPrices}
+  selectedFuelType={priceFilter}
+  onPriceClick={handleBestPriceClick} // Just pass the function
+  onToggleSidebar={toggleSidebar}
+  isSidebarCollapsed={isSidebarCollapsed}
+  isDarkMode={isDarkMode}
+  viewMode={viewMode} // Add this
+/>
+
 
             {/* List View Main Area */}
             <div className="list-view-container">
@@ -1501,9 +1531,9 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
                   )}
                   <h2>Gas Stations</h2>
                   <div className="list-stats">
-                    <span>{sortedStations.length} stations • </span>
-                    <span>{openStationsCount} open • </span>
-                    <span>Sorted by {sortBy.replace('_', ' ')} ({sortDirection === 'low_to_high' ? 'Low to High' : 'High to Low'})</span>
+                    <span><b>Total Stations • {sortedStations.length}  </b></span>
+                    <span><b>Open • {openStationsCount}  </b></span>
+                    <span><b>Sorted by {sortBy.replace('_', ' ')} ({sortDirection === 'low_to_high' ? 'Low to High' : 'High to Low'})</b></span>
                   </div>
                 </div>
                 
@@ -1558,15 +1588,17 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
 
               {/* List View Footer Stats with Clickable Best Prices */}
               <div className="list-view-footer">
-                <ClickableStats
-                  bestPrices={bestPrices}
-                  onPriceClick={handleBestPriceClick}
-                  openStationsCount={openStationsCount}
-                  sortedStationsLength={sortedStations.length}
-                  averagePrice={averagePrice}
-                  selectedFuelType={priceFilter}
-                />
-              </div>
+  <ClickableStats
+    bestPrices={bestPrices}
+    onPriceClick={handleBestPriceClick}
+    openStationsCount={openStationsCount}
+    sortedStationsLength={sortedStations?.length || 0}
+    averagePrice={averagePrice}
+    selectedFuelType={priceFilter}
+    isMapView={viewMode === 'map'} // Add this
+  />
+</div>
+
             </div>
           </>
         )}
@@ -1603,45 +1635,7 @@ const GasStationsList: React.FC<GasStationsListProps> = ({ data, initialUserLoca
         </div>
       </footer>
 
-      {/* Add CSS for clickable stats and scrolling */}
-      <style jsx>{`
-        .stations-grid-container {
-          flex: 1;
-          overflow-y: auto;
-          padding: 1rem;
-        }
-        
-        .stations-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1.5rem;
-          padding: 0.5rem;
-        }
-        
-        .station-grid-item {
-          min-height: 0;
-        }
-        
-        .list-view-content {
-          display: flex;
-          flex-direction: column;
-          flex: 1;
-          overflow: hidden;
-        }
-        
-        @media (max-width: 1200px) {
-          .stations-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .stations-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-          }
-        }
-      `}</style>
+      
     </div>
   );
 };

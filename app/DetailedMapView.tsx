@@ -227,6 +227,7 @@ const ZoomTracker: React.FC<{ onZoomChange: (zoom: number) => void }> = ({ onZoo
   return null;
 };
 
+
 // Cluster visualization component
 const StationClusters: React.FC<{ 
   stations: GasStation[];
@@ -529,7 +530,7 @@ const StationInfoOverlay: React.FC<{
   );
 };
 
-const DetailedMapView: React.FC<DetailedMapViewProps> = ({
+  const DetailedMapView: React.FC<DetailedMapViewProps> = ({
   stations,
   selectedStation,
   userLocation,
@@ -547,6 +548,11 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
   const [currentZoom, setCurrentZoom] = useState(13);
   const [clickedStation, setClickedStation] = useState<GasStation | null>(null);
   const [showStationInfo, setShowStationInfo] = useState(false);
+  const [isFlyingToStation, setIsFlyingToStation] = useState(false);
+  
+  // Track which station we're currently flying to
+  const flyingToStationIdRef = useRef<string | null>(null);
+  const lastSelectedStationIdRef = useRef<string | null>(null);
 
   // Calculate center
   const getCenter = (): [number, number] => {
@@ -559,6 +565,103 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
       return [avgLat, avgLng];
     }
     return [52.52, 13.405]; // Berlin
+  };
+
+  // Fly to station when selectedStation changes (from sidebar) - FIXED VERSION
+  useEffect(() => {
+    // Only fly if:
+    // 1. There's a selected station
+    // 2. It's different from the last one we processed
+    // 3. We're not already flying to a station
+    if (selectedStation && 
+        selectedStation.id !== lastSelectedStationIdRef.current &&
+        !isFlyingToStation) {
+      
+      // Skip if we just clicked this station from the map
+      if (flyingToStationIdRef.current === selectedStation.id) {
+        flyingToStationIdRef.current = null;
+        return;
+      }
+      
+      // Update refs
+      lastSelectedStationIdRef.current = selectedStation.id;
+      flyingToStationIdRef.current = selectedStation.id;
+      
+      // Fly to the station
+      flyToStation(selectedStation, true);
+    }
+  }, [selectedStation, isFlyingToStation]);
+
+  // Handle custom event for flying to station
+  useEffect(() => {
+    const handleFlyToStation = (e: CustomEvent) => {
+      const { lat, lng, stationId } = e.detail;
+      
+      // Find the station
+      const station = stations.find(s => s.id === stationId);
+      if (station) {
+        // Update refs to track we're flying to this station
+        flyingToStationIdRef.current = station.id;
+        lastSelectedStationIdRef.current = station.id;
+        
+        // Call onStationSelect to update parent
+        onStationSelect(station);
+        
+        // Fly to station
+        flyToStation(station, true);
+      }
+    };
+
+    window.addEventListener('flyToStation', handleFlyToStation as EventListener);
+
+    return () => {
+      window.removeEventListener('flyToStation', handleFlyToStation as EventListener);
+    };
+  }, [stations, onStationSelect]);
+
+  // Unified function to fly to station
+  const flyToStation = (station: GasStation, showInfo: boolean = false) => {
+    if (mapRef.current) {
+      setIsFlyingToStation(true);
+      
+      // Center and zoom to station
+      mapRef.current.flyTo([station.lat, station.lng], Math.max(currentZoom, 15), {
+        animate: true,
+        duration: 1.5
+      });
+      
+      // Update local state
+      setClickedStation(station);
+      if (showInfo) {
+        setShowStationInfo(true);
+      }
+      
+      // Reset flying flag after animation
+      setTimeout(() => {
+        setIsFlyingToStation(false);
+        flyingToStationIdRef.current = null;
+      }, 1600);
+    }
+  };
+
+  // Handle station click from map
+  const handleStationClick = (station: GasStation) => {
+    // Update refs to track we're clicking from map
+    flyingToStationIdRef.current = station.id;
+    lastSelectedStationIdRef.current = station.id;
+    
+    // Call parent to update selected station
+    onStationSelect(station);
+    
+    // Fly to the station
+    flyToStation(station, true);
+  };
+
+  // Handle cluster click
+  const handleClusterClick = (clusterStations: GasStation[]) => {
+    if (clusterStations.length > 0) {
+      handleStationClick(clusterStations[0]);
+    }
   };
 
   // Get tile layer URL based on selected layer
@@ -585,26 +688,6 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
     }
   };
 
-  // Handle station click
-  const handleStationClick = (station: GasStation) => {
-    onStationSelect(station);
-    setClickedStation(station);
-    setShowStationInfo(true);
-    
-    // Center and zoom to station
-    if (mapRef.current) {
-      mapRef.current.setView([station.lat, station.lng], Math.max(currentZoom, 15));
-    }
-  };
-
-  // Handle cluster click
-  const handleClusterClick = (clusterStations: GasStation[]) => {
-    if (clusterStations.length > 0) {
-      const firstStation = clusterStations[0];
-      handleStationClick(firstStation);
-    }
-  };
-
   // Handle recenter
   const handleRecenter = () => {
     if (userLocation && mapRef.current) {
@@ -623,7 +706,7 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
     }
   };
 
-  // Show cheapest station
+  // Show cheapest station (from custom controls)
   const handleShowCheapest = () => {
     let cheapestStation: GasStation | null = null;
     
@@ -647,8 +730,16 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
       }, null as GasStation | null);
     }
     
-    if (cheapestStation && mapRef.current) {
-      handleStationClick(cheapestStation);
+    if (cheapestStation) {
+      // Update refs to track we're selecting cheapest
+      flyingToStationIdRef.current = cheapestStation.id;
+      lastSelectedStationIdRef.current = cheapestStation.id;
+      
+      // Call parent to update selected station
+      onStationSelect(cheapestStation);
+      
+      // Fly to the station
+      flyToStation(cheapestStation, true);
     }
   };
 
@@ -691,10 +782,11 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
     setClickedStation(null);
   };
 
+
   return (
     <div className="detailed-map-container">
       <MapContainer
-        center={getCenter()}
+        center={getCenter()} 
         zoom={13}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
@@ -807,7 +899,7 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
                 click: () => handleStationClick(station),
               }}
             >
-              <Popup className="station-popup">
+               <Popup className="station-popup">
                 <div className="popup-content">
                   <div className="popup-header">
                     <h4 className="station-name">{station.name}</h4>
@@ -960,342 +1052,6 @@ const DetailedMapView: React.FC<DetailedMapViewProps> = ({
         <div className="loading-spinner"></div>
         <p>Loading map data...</p>
       </div>
-
-      {/* Add CSS for clickable features */}
-      <style jsx>{`
-        .detailed-map-container {
-          position: relative;
-          height: 100%;
-          width: 100%;
-        }
-        
-        .clickable-marker {
-          cursor: pointer !important;
-          transition: transform 0.2s ease;
-        }
-        
-        .clickable-marker:hover {
-          transform: scale(1.1);
-          z-index: 1000 !important;
-        }
-        
-        .station-info-overlay {
-          position: absolute;
-          top: 20px;
-          left: 20px;
-          right: 20px;
-          max-width: 400px;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-          z-index: 1000;
-          overflow: hidden;
-        }
-        
-        .overlay-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 20px;
-          background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-          color: white;
-        }
-        
-        .station-title {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        
-        .station-title h3 {
-          margin: 0;
-          font-size: 18px;
-        }
-        
-        .status-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: bold;
-          text-transform: uppercase;
-        }
-        
-        .status-badge.open {
-          background: #10B981;
-          color: white;
-        }
-        
-        .status-badge.closed {
-          background: #EF4444;
-          color: white;
-        }
-        
-        .close-overlay {
-          background: none;
-          border: none;
-          color: white;
-          font-size: 20px;
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
-        }
-        
-        .close-overlay:hover {
-          background: rgba(255,255,255,0.2);
-        }
-        
-        .overlay-content {
-          padding: 20px;
-        }
-        
-        .station-meta {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 16px;
-        }
-        
-        .station-brand {
-          font-weight: bold;
-          color: #6B7280;
-          font-size: 14px;
-          text-transform: uppercase;
-        }
-        
-        .station-location,
-        .station-distance {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          color: #4B5563;
-        }
-        
-        .rating {
-          margin-left: 8px;
-          font-weight: bold;
-          color: #F59E0B;
-        }
-        
-        .best-price-badge {
-          padding: 8px 12px;
-          border-radius: 8px;
-          margin-bottom: 12px;
-          font-size: 14px;
-          font-weight: bold;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .best-price-badge.overall {
-          background: #FEF3C7;
-          color: #92400E;
-          border-left: 4px solid #F59E0B;
-        }
-        
-        .best-price-badge.fuel {
-          background: #D1FAE5;
-          color: #065F46;
-          border-left: 4px solid #10B981;
-        }
-        
-        .price-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-          margin: 20px 0;
-        }
-        
-        .price-item {
-          padding: 12px;
-          border-radius: 8px;
-          background: #F9FAFB;
-          border: 2px solid #E5E7EB;
-          text-align: center;
-          transition: all 0.3s ease;
-        }
-        
-        .price-item.best {
-          border-color: #10B981;
-          background: #D1FAE5;
-        }
-        
-        .price-item.overall-best {
-          border-color: #F59E0B;
-          background: #FEF3C7;
-        }
-        
-        .fuel-type {
-          font-size: 12px;
-          color: #6B7280;
-          margin-bottom: 4px;
-        }
-        
-        .fuel-price {
-          font-size: 18px;
-          font-weight: bold;
-          color: #111827;
-        }
-        
-        .amenities-section {
-          margin: 20px 0;
-        }
-        
-        .section-title {
-          font-weight: bold;
-          margin-bottom: 8px;
-          color: #4B5563;
-        }
-        
-        .amenities-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-        
-        .amenity-tag {
-          padding: 4px 12px;
-          background: #EFF6FF;
-          border-radius: 16px;
-          font-size: 12px;
-          color: #1E40AF;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: 12px;
-          margin-top: 20px;
-        }
-        
-        .action-btn {
-          flex: 1;
-          padding: 12px;
-          border-radius: 8px;
-          border: none;
-          font-weight: bold;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          transition: all 0.3s ease;
-        }
-        
-        .action-btn.directions {
-          background: #3B82F6;
-          color: white;
-        }
-        
-        .action-btn.directions:hover {
-          background: #2563EB;
-        }
-        
-        .action-btn.details {
-          background: #F3F4F6;
-          color: #374151;
-        }
-        
-        .action-btn.details:hover {
-          background: #E5E7EB;
-        }
-        
-        .zoom-level-display {
-          position: absolute;
-          bottom: 20px;
-          right: 20px;
-          background: rgba(255,255,255,0.9);
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: bold;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          z-index: 1000;
-        }
-        
-        .custom-controls {
-          background: white;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .control-group {
-          position: relative;
-        }
-        
-        .control-btn {
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: none;
-          background: white;
-          cursor: pointer;
-          font-size: 18px;
-          transition: all 0.3s ease;
-        }
-        
-        .control-btn:hover {
-          background: #F3F4F6;
-        }
-        
-        .control-btn.active {
-          background: #3B82F6;
-          color: white;
-        }
-        
-        .control-dropdown {
-          position: absolute;
-          top: 0;
-          left: -120px;
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          overflow: hidden;
-          z-index: 1001;
-        }
-        
-        .dropdown-btn {
-          width: 100px;
-          padding: 8px 12px;
-          border: none;
-          background: white;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.3s ease;
-        }
-        
-        .dropdown-btn:hover {
-          background: #F3F4F6;
-        }
-        
-        .dropdown-btn.active {
-          background: #3B82F6;
-          color: white;
-        }
-        
-        @media (max-width: 768px) {
-          .station-info-overlay {
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            max-width: none;
-          }
-          
-          .price-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .action-buttons {
-            flex-direction: column;
-          }
-        }
-      `}</style>
     </div>
   );
 };
