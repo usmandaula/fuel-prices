@@ -2870,6 +2870,7 @@ body {
 .leaflet-popup-content-wrapper,
 .leaflet-popup-content-wrapper *:not(.icon):not(.rating) {
   color: var(--popup-text) !important;
+  background: var(--gray-100);
  
 }
 
