@@ -284,8 +284,8 @@ body {
 .search-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .current-location-btn {
-  width: 48px;
-  height: 48px;
+    width: 4rem;
+    height: 3.6rem;
   background: var(--gray-100);
   border: 2px solid var(--gray-200);
   border-radius: var(--radius-lg);
@@ -3772,24 +3772,5 @@ body {
   max-width: 400px;
 }
 
-/* Dark mode adjustments */
 
 
-
-
-/* =========================================== */
-/* DEBUG BORDERS (remove after fixing)        */
-/* =========================================== */
-/*
-.sidebar-footer {
-  border: 2px solid red !important;
-}
-
-.stats-grid {
-  border: 2px solid blue !important;
-}
-
-.stat-item {
-  border: 2px solid green !important;
-}
-*/
