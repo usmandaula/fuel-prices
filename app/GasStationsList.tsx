@@ -658,6 +658,7 @@ const bestPrices = useMemo(() => {
         isLocating={isLocating}
         dataSource={data.data}
         getUserLocation={getUserLocation}
+        gasStationData={data}
       />
     </div>
   );
@@ -1167,13 +1168,16 @@ interface FooterProps {
   isLocating: boolean;
   dataSource: string;
   getUserLocation: () => void;
+  gasStationData?: any;
 }
 
 const Footer: React.FC<FooterProps> = ({
   userLocation,
   isLocating,
   dataSource,
-  getUserLocation
+  getUserLocation,
+  gasStationData
+
 }) => {
   return (
     <footer className="app-footer">
@@ -1191,7 +1195,9 @@ const Footer: React.FC<FooterProps> = ({
           )}
         </div>
         <div className="footer-center">
-          <span className="data-source">Data: {dataSource} • Map: OpenStreetMap</span>
+          <span className="data-source">Data: {dataSource} • Map: OpenStreetMap • API: {gasStationData.license || 'Tankerkönig API'}</span>
+            
+             
         </div>
         <div className="footer-right">
           <button 

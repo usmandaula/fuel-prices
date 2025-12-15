@@ -273,44 +273,7 @@ const App: React.FC = () => {
 );
 
 
-  // Footer component
-  const renderFooter = () => (
-    <div className="app-footer">
-      <div className="footer-content">
-        <div className="data-info">
-          {gasStationData && (
-            <>
-              <span className="data-source">
-                Data: {gasStationData.license || 'Tankerkönig API'}
-              </span>
-              <span className="data-status">
-                Status: {gasStationData.status === 'ok' ? '✅ Live' : '⚠️ Limited'}
-              </span>
-              <span className="stations-count">
-                Stations: {gasStationData.stations?.length || 0} found
-              </span>
-            </>
-          )}
-        </div>
-        <div className="footer-actions">
-          <button 
-            className="footer-btn"
-            onClick={refreshData}
-          >
-            Refresh Prices
-          </button>
-          <a 
-            href="https://creativecommons.tankerkoenig.de/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="footer-btn"
-          >
-            API Info
-          </a>
-        </div>
-      </div>
-    </div>
-  );
+
 
   // Main render logic
   if (loading) return renderLoading();
@@ -330,7 +293,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {renderFooter()}
+     
     </div>
   );
 };
