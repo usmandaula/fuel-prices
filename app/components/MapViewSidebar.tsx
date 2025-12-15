@@ -3,6 +3,9 @@ import { FaFilter, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
 import { MapViewSidebarProps } from '../types/gasStationTypes';
 import ClickableStats from './ClickableStats';
 
+// Define radius options (same as in main app)
+const RADIUS_OPTIONS = [1, 3, 5, 10, 15, 25] as const;
+
 const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
   sortBy,
   setSortBy,
@@ -19,6 +22,8 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
   selectedFuelType,
   onPriceClick,
   onToggleSidebar,
+  radius, // Add radius prop
+  onRadiusChange, // Add onRadiusChange prop
   isSidebarCollapsed = false,
   isDarkMode = false,
   viewMode = 'map'
@@ -40,6 +45,9 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
         </div>
       </div>
 
+      {/* Add Radius Selector Section */}
+      
+
       <div className="quick-filters">
         <div className="filter-group">
           <label className="filter-label">Quick Filters:</label>
@@ -53,7 +61,26 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
             </button>
           </div>
         </div>
-
+<div className="radius-selector-sidebar">
+        <label className="filter-label">Search Radius:</label>
+        <div className="radius-buttons-sidebar">
+          {RADIUS_OPTIONS.map((r) => (
+            <button
+              key={r}
+              className={`radius-btn-sidebar ${radius === r ? 'active' : ''}`}
+              onClick={() => onRadiusChange && onRadiusChange(r)}
+              title={`Search within ${r}km`}
+            >
+              {r}km
+            </button>
+          ))}
+        </div>
+        {radius && (
+          <div className="current-radius-display">
+            <span>Current: <strong>{radius}km</strong></span>
+          </div>
+        )}
+      </div>
         {/* <div className="filter-group">
           <label className="filter-label">Fuel Price Focus:</label>
           <div className="price-buttons-simple">

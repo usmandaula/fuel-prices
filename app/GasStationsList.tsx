@@ -109,7 +109,9 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 const GasStationsList: React.FC<GasStationsListProps> = ({ 
   data, 
   initialUserLocation,
-    onLocationSearch 
+    onLocationSearch, 
+    radius,
+  onRadiusChange 
  
 }) => {
   // ========================================================
@@ -621,6 +623,8 @@ const bestPrices = useMemo(() => {
             mapZoom={mapZoom}
             setMapZoom={setMapZoom}
             getDirections={getDirections}
+            radius={radius}
+  onRadiusChange={onRadiusChange}
           />
         ) : (
           // LIST VIEW LAYOUT
@@ -703,6 +707,9 @@ interface MapViewLayoutProps {
   mapZoom: number;
   setMapZoom: (zoom: number) => void;
   getDirections: (station: GasStation) => void;
+  radius: number;
+  onRadiusChange: (radius: number) => void;
+  
 }
 
 const MapViewLayout: React.FC<MapViewLayoutProps> = ({
@@ -733,12 +740,18 @@ const MapViewLayout: React.FC<MapViewLayoutProps> = ({
   getUserLocation,
   mapZoom,
   setMapZoom,
-  getDirections
+  getDirections,
+  radius,
+  onRadiusChange
+  
+
+
 }) => {
   return (
     <>
       {/* Map View Sidebar (Filters only) */}
       <MapViewSidebar
+        
         sortBy={sortBy}
         setSortBy={setSortBy}
         sortDirection={sortDirection}
@@ -757,6 +770,8 @@ const MapViewLayout: React.FC<MapViewLayoutProps> = ({
         isSidebarCollapsed={isSidebarCollapsed}
         isDarkMode={isDarkMode}
         viewMode="map"
+        radius={radius} // Make sure radius is available here
+        onRadiusChange={onRadiusChange} // And this
       />
 
       {/* Map Area */}

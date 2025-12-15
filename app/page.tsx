@@ -355,6 +355,8 @@ const App: React.FC = () => {
           data={gasStationData} 
           initialUserLocation={userLocation}
           onLocationSearch={handleLocationSearch}
+          radius={radius}
+          onRadiusChange={handleRadiusChange}
         />
       )}
 

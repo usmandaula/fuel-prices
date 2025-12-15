@@ -28,10 +28,7 @@ export interface GasStationData {
   stations: GasStation[];
 }
 
-export interface GasStationsListProps {
-  data: GasStationData;
-  initialUserLocation?: { lat: number; lng: number };
-}
+
 
 export interface BestPriceInfo {
   price: number;
@@ -83,6 +80,8 @@ export interface MapViewSidebarProps {
   openStationsCount: number;
   sortedStationsLength: number;
   averagePrice: string;
+  radius?: number;
+  onRadiusChange?: (radius: number) => void;
   bestPrices: {
     diesel: BestPriceInfo | null;
     e5: BestPriceInfo | null;
@@ -126,4 +125,6 @@ export interface GasStationsListProps {
   data: GasStationData;
   initialUserLocation?: { lat: number; lng: number; name?: string };
   onLocationSearch?: (location: { lat: number; lng: number; name: string }) => void;
+  radius?: number;
+  onRadiusChange?: (radius: number) => void;
 }
