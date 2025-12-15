@@ -54,7 +54,7 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
           </div>
         </div>
 
-        <div className="filter-group">
+        {/* <div className="filter-group">
           <label className="filter-label">Fuel Price Focus:</label>
           <div className="price-buttons-simple">
             {['all', 'diesel', 'e5', 'e10'].map((type) => (
@@ -67,7 +67,7 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
               </button>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="sidebar-footer">
