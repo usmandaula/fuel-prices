@@ -60,12 +60,12 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      console.log(`Fetching gas stations: ${lat}, ${lng}, radius: ${radius}km`);
+  //    console.log(`Fetching gas stations: ${lat}, ${lng}, radius: ${radius}km`);
       
       // Use cached API call for better performance
       const data = await fetchGasStationsCached(lat, lng, radius);
       
-      console.log('Data fetched successfully');
+    //  console.log('Data fetched successfully');
       setGasStationData(data);
       setUserLocation({ lat, lng, name: locationName });
       
