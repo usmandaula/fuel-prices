@@ -1003,7 +1003,7 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
         </div>
 
         {/* List View Footer Stats */}
-        <div className="list-view-footer">
+        {/* <div className="list-view-footer">
           <ClickableStats
             bestPrices={bestPrices}
             onPriceClick={handleBestPriceClick}
@@ -1013,7 +1013,7 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
             selectedFuelType={priceFilter}
             isMapView={false}
           />
-        </div>
+        </div> */}
       </div>
     </>
   );

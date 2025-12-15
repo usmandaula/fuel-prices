@@ -77,7 +77,8 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
         </div>
         {radius && (
           <div className="current-radius-display">
-            <span>Current: <strong>{radius}km</strong></span>
+            <span>Current: 
+              <b>{radius}km</b></span>
           </div>
         )}
       </div>
