@@ -66,6 +66,8 @@ export interface ListViewSidebarProps {
   isSidebarCollapsed?: boolean;
   isDarkMode?: boolean;
   viewMode?: 'list' | 'map';
+    radius?: number;
+  onRadiusChange?: (radius: number) => void;
 }
 
 export interface MapViewSidebarProps {

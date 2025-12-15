@@ -29,7 +29,9 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
   onToggleSidebar,
   isSidebarCollapsed = false,
   isDarkMode = false,
-  viewMode = 'list'
+  viewMode = 'list',
+    radius, // Add radius prop
+  onRadiusChange, // Add onRadiusChange prop
 }) => {
   return (
     <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>

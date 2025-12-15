@@ -650,6 +650,8 @@ const bestPrices = useMemo(() => {
             isLocating={isLocating}
             getUserLocation={getUserLocation}
             scrollToStation={scrollToStation}
+            radius={radius}
+  onRadiusChange={onRadiusChange}
           />
         )}
       </main>
@@ -853,6 +855,9 @@ interface ListViewLayoutProps {
   isLocating: boolean;
   getUserLocation: () => void;
   scrollToStation: (stationId: string) => void;
+  radius:number;
+    onRadiusChange: (radius: number) => void;
+  
 }
 
 const ListViewLayout: React.FC<ListViewLayoutProps> = ({
@@ -876,7 +881,9 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
   isDarkMode,
   isLocating,
   getUserLocation,
-  scrollToStation
+  scrollToStation,
+  radius,
+  onRadiusChange
 }) => {
   return (
     <>
@@ -900,6 +907,8 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
         isSidebarCollapsed={isSidebarCollapsed}
         isDarkMode={isDarkMode}
         viewMode="list"
+        radius={radius}
+  onRadiusChange={onRadiusChange}
       />
 
       {/* List View Main Area */}
@@ -920,7 +929,11 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
             </div>
           </div>
           
+          
+          
+         
           <div className="list-view-actions">
+            
             <button 
               className="list-action-btn"
               onClick={getUserLocation}
@@ -936,8 +949,32 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
               <FaFilter />
               <span>{showOnlyOpen ? 'Show All' : 'Show Open Only'}</span>
             </button>
+          {/* Radius Selector for List View */}
+<div className="radius-selector-list">
+  <div className="radius-header">
+    <FaRuler className="radius-icon" />
+    <span className="radius-label">Radius</span>
+    <span className="current-radius">{radius}km</span>
+  </div>
+  
+  <div className="radius-buttons">
+    {[1, 3, 5, 10, 15, 25].map((r) => (
+      <button
+        key={r}
+        className={`radius-btn ${radius === r ? 'active' : ''}`}
+        onClick={() => onRadiusChange && onRadiusChange(r)}
+        title={`Search within ${r} kilometers`}
+      >
+        {r}
+        <span className="unit">km</span>
+      </button>
+    ))}
+  </div>
+</div>
           </div>
+          
         </div>
+        
 
         {/* Station Cards Grid */}
         <div className="list-view-content">
