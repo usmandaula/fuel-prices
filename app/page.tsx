@@ -250,58 +250,28 @@ const App: React.FC = () => {
 
   // Header controls component
   const renderHeaderControls = () => (
-    <div className="app-header-controls">
-      <div className="header-left">
-        <h1 className="app-title">
-          <span className="fuel-icon">⛽</span>
-          FuelFinder
-          <span className="beta-badge">BETA</span>
-        </h1>
-        {userLocation && (
-          <div className="location-info">
-            <span className="location-name">{userLocation.name}</span>
-            <span className="location-coords">
-              ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
-            </span>
-          </div>
-        )}
-      </div>
-      
-      <div className="header-right">
-        <div className="radius-selector">
-          <label>Search Radius: {radius}km</label>
-          <div className="radius-buttons">
-            {RADIUS_OPTIONS.map((r) => (
-              <button
-                key={r}
-                className={`radius-btn ${radius === r ? 'active' : ''}`}
-                onClick={() => handleRadiusChange(r)}
-              >
-                {r}km
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div className="action-buttons">
-          <button 
-            className="action-btn refresh-btn"
-            onClick={refreshData}
-            title="Refresh prices"
-          >
-            🔄 Refresh
-          </button>
-          <button 
-            className="action-btn location-btn"
-            onClick={getCurrentLocation}
-            title="Use current location"
-          >
-            📍 My Location
-          </button>
-        </div>
-      </div>
+  <div className="app-header-controls">
+    <div className="header-left">
+      <h1 className="app-title">
+        <span className="fuel-icon">⛽</span>
+        FuelFinder
+        <span className="beta-badge">BETA</span>
+      </h1>
     </div>
-  );
+    
+    <div className="header-right">
+      {userLocation && (
+        <div className="location-info">
+          <span className="location-name">{userLocation.name}</span>
+          <span className="location-coords">
+            ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
+          </span>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
 
   // Footer component
   const renderFooter = () => (

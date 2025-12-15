@@ -550,11 +550,7 @@ const bestPrices = useMemo(() => {
       {/* Top Navigation */}
       <nav className="app-nav">
         <div className="nav-left">
-          <div className="app-brand">
-            <FaGasPump className="brand-icon" />
-            <h1>FuelFinder</h1>
-            <span className="beta-badge">BETA</span>
-          </div>
+          
         </div>
         
         <div className="nav-center">
