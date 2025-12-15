@@ -23,7 +23,7 @@ import {
   getAmenityIcon
 } from '../utils/gasStationUtils';
 
-
+import { formatPrice, formatDistance} from '../utils/formatUtils';
 const StationCard: React.FC<StationCardProps> = ({
   station,
   isSelected,
@@ -125,7 +125,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{station.diesel.toFixed(3)}</div>
+            <div className="price-value">€{formatPrice(station.diesel)}</div>
             {selectedFuelType === 'diesel' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -140,7 +140,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{station.e5.toFixed(3)}</div>
+            <div className="price-value">€{formatPrice(station.e5)}</div>
             {selectedFuelType === 'e5' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -155,7 +155,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{station.e10.toFixed(3)}</div>
+            <div className="price-value">€{formatPrice(station.e10)}</div>
             {selectedFuelType === 'e10' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -166,7 +166,7 @@ const StationCard: React.FC<StationCardProps> = ({
           <div className="overall-best-price-highlight">
             <div className="overall-best-badge-inline">
               <FaCrown />
-              <span>Best Overall Price: €{station.minPrice.toFixed(3)}</span>
+              <span>Best Overall Price: €{formatPrice(station.minPrice)}</span>
             </div>
           </div>
         )}
@@ -176,9 +176,9 @@ const StationCard: React.FC<StationCardProps> = ({
             <div className="selected-fuel-best-badge">
               <FaTrophy />
               <span>Best {selectedFuelType.toUpperCase()} Price: €{
-                selectedFuelType === 'diesel' ? station.diesel.toFixed(3) :
-                selectedFuelType === 'e5' ? station.e5.toFixed(3) :
-                station.e10.toFixed(3)
+                selectedFuelType === 'diesel' ? formatPrice(station.diesel) :
+                selectedFuelType === 'e5' ? formatPrice(station.e5) :
+                formatPrice(station.e10)
               }</span>
             </div>
           </div>

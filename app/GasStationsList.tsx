@@ -274,63 +274,77 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
   /**
    * Finds best prices for each fuel type across all stations
    */
-  const bestPrices = useMemo(() => {
-    let bestDiesel: BestPriceInfo | null = null;
-    let bestE5: BestPriceInfo | null = null;
-    let bestE10: BestPriceInfo | null = null;
-    let bestOverall: BestPriceInfo | null = null;
+// In GasStationsList.tsx, update the bestPrices calculation:
+const bestPrices = useMemo(() => {
+  let bestDiesel: BestPriceInfo | null = null;
+  let bestE5: BestPriceInfo | null = null;
+  let bestE10: BestPriceInfo | null = null;
+  let bestOverall: BestPriceInfo | null = null;
+  
+  stationsWithDistances.forEach(station => {
+    if (!station) return;
     
-    stationsWithDistances.forEach(station => {
-      // Diesel best price
-      if (!bestDiesel || station.diesel < bestDiesel.price) {
-        bestDiesel = {
-          price: station.diesel,
-          stationId: station.id,
-          stationName: station.name,
-          type: 'diesel'
-        };
-      }
+    // Only consider stations with valid prices (> 0)
+    
+    // Diesel best price
+    if (station.diesel > 0 && (!bestDiesel || station.diesel < bestDiesel.price)) {
+      bestDiesel = {
+        price: station.diesel,
+        stationId: station.id,
+        stationName: station.name,
+        type: 'diesel'
+      };
+    }
+    
+    // E5 best price
+    if (station.e5 > 0 && (!bestE5 || station.e5 < bestE5.price)) {
+      bestE5 = {
+        price: station.e5,
+        stationId: station.id,
+        stationName: station.name,
+        type: 'e5'
+      };
+    }
+    
+    // E10 best price
+    if (station.e10 > 0 && (!bestE10 || station.e10 < bestE10.price)) {
+      bestE10 = {
+        price: station.e10,
+        stationId: station.id,
+        stationName: station.name,
+        type: 'e10'
+      };
+    }
+    
+    // Overall best price (minimum of all valid prices)
+    const validPrices = [
+      station.diesel > 0 ? { price: station.diesel, type: 'diesel' } : null,
+      station.e5 > 0 ? { price: station.e5, type: 'e5' } : null,
+      station.e10 > 0 ? { price: station.e10, type: 'e10' } : null
+    ].filter(Boolean) as { price: number; type: string }[];
+    
+    if (validPrices.length > 0) {
+      const minStationPrice = Math.min(...validPrices.map(p => p.price));
+      const minPriceType = validPrices.find(p => p.price === minStationPrice)?.type || 'diesel';
       
-      // E5 best price
-      if (!bestE5 || station.e5 < bestE5.price) {
-        bestE5 = {
-          price: station.e5,
-          stationId: station.id,
-          stationName: station.name,
-          type: 'e5'
-        };
-      }
-      
-      // E10 best price
-      if (!bestE10 || station.e10 < bestE10.price) {
-        bestE10 = {
-          price: station.e10,
-          stationId: station.id,
-          stationName: station.name,
-          type: 'e10'
-        };
-      }
-      
-      // Overall best price (minimum of all prices)
-      const minStationPrice = Math.min(station.diesel, station.e5, station.e10);
       if (!bestOverall || minStationPrice < bestOverall.price) {
         bestOverall = {
           price: minStationPrice,
           stationId: station.id,
           stationName: station.name,
-          type: station.diesel === minStationPrice ? 'diesel' : 
-                station.e5 === minStationPrice ? 'e5' : 'e10'
+          type: minPriceType as any
         };
       }
-    });
+    }
+  });
 
-    return { 
-      diesel: bestDiesel, 
-      e5: bestE5, 
-      e10: bestE10, 
-      overall: bestOverall 
-    };
-  }, [stationsWithDistances]);
+  return { 
+    diesel: bestDiesel, 
+    e5: bestE5, 
+    e10: bestE10, 
+    overall: bestOverall 
+  };
+}, [stationsWithDistances]);
 
   /**
    * Processes stations with best price flags

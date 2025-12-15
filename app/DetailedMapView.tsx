@@ -15,7 +15,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
+import { formatPrice, formatDistance, getCheapestFuel } from './utils/formatUtils';
 // Fix leaflet icons
 if (typeof window !== 'undefined') {
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -305,7 +305,7 @@ const StationClusters: React.FC<{
           .bindPopup(`
             <div class="cluster-popup">
               <h4>${clusterStations.length} Stations</h4>
-              <div>Average Price: €${avgPrice.toFixed(3)}</div>
+              <div>Average Price: €${formatPrice(avgPrice)}</div>
               <div>Click to zoom in</div>
             </div>
           `);
@@ -461,7 +461,7 @@ const StationInfoOverlay: React.FC<{
         {/* Best price badges */}
         {station.isOverallBestPrice && (
           <div className="best-price-badge overall">
-            👑 Best Overall Price: €{station.minPrice?.toFixed(3)}
+            👑 Best Overall Price: €{formatPrice(station.minPrice)}
           </div>
         )}
         
@@ -474,15 +474,15 @@ const StationInfoOverlay: React.FC<{
         <div className="price-grid">
           <div className={`price-item ${station.isBestForSelectedFuel && priceFilter === 'diesel' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.diesel ? 'overall-best' : ''}`}>
             <div className="fuel-type">Diesel</div>
-            <div className="fuel-price">€{station.diesel.toFixed(3)}</div>
+            <div className="fuel-price">€{formatPrice(station.diesel)}</div>
           </div>
           <div className={`price-item ${station.isBestForSelectedFuel && priceFilter === 'e5' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.e5 ? 'overall-best' : ''}`}>
             <div className="fuel-type">E5</div>
-            <div className="fuel-price">€{station.e5.toFixed(3)}</div>
+            <div className="fuel-price">€{formatPrice(station.e5)}</div>
           </div>
           <div className={`price-item ${station.isBestForSelectedFuel && priceFilter === 'e10' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.e10 ? 'overall-best' : ''}`}>
             <div className="fuel-type">E10</div>
-            <div className="fuel-price">€{station.e10.toFixed(3)}</div>
+            <div className="fuel-price">€{formatPrice(station.e10)}</div>
           </div>
         </div>
         
@@ -541,6 +541,9 @@ const StationInfoOverlay: React.FC<{
   onZoomChange,
   priceFilter = 'all'
 }) => {
+ 
+   // Safe station data extraction
+  
   const mapRef = useRef<L.Map>(null);
   const [showPriceCircles, setShowPriceCircles] = useState(false);
   const [priceCircleType, setPriceCircleType] = useState<'diesel' | 'e5' | 'e10'>('diesel');
@@ -954,15 +957,15 @@ const StationInfoOverlay: React.FC<{
                   <div className="popup-prices">
                     <div className={`price-row ${station.isBestForSelectedFuel && priceFilter === 'diesel' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.diesel ? 'overall-best' : ''}`}>
                       <span className="fuel-type">Diesel</span>
-                      <span className="fuel-price">€{station.diesel.toFixed(3)}</span>
+                      <span className="fuel-price">€{formatPrice(station.diesel)}</span>
                     </div>
                     <div className={`price-row ${station.isBestForSelectedFuel && priceFilter === 'e5' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.e5 ? 'overall-best' : ''}`}>
                       <span className="fuel-type">E5</span>
-                      <span className="fuel-price">€{station.e5.toFixed(3)}</span>
+                      <span className="fuel-price">€{formatPrice(station.e5)}</span>
                     </div>
                     <div className={`price-row ${station.isBestForSelectedFuel && priceFilter === 'e10' ? 'best' : ''} ${station.isOverallBestPrice && station.minPrice === station.e10 ? 'overall-best' : ''}`}>
                       <span className="fuel-type">E10</span>
-                      <span className="fuel-price">€{station.e10.toFixed(3)}</span>
+                      <span className="fuel-price">€{formatPrice(station.e10)}</span>
                     </div>
                   </div>
                   

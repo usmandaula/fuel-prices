@@ -1383,14 +1383,15 @@ body {
 }
 
 /* List View Footer */
+/* List View Footer */
 .list-view-footer {
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   background: var(--gray-50);
   border-top: 1px solid var(--gray-200);
-  position: sticky;
-  bottom: 0;
-  z-index: 10;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  position: static; /* Changed from sticky */
+  z-index: 1; /* Changed from 10 */
+  margin-top: auto; /* Push to bottom of container */
+  width: 100%;
 }
 
 .list-stats-grid {
@@ -3288,3 +3289,507 @@ body {
     justify-content: center;
   }
 }
+/* =========================================== */
+/* FIX FOR CLICKABLE STATS OVERLAY            */
+/* =========================================== */
+
+/* Main clickable-stats container */
+.clickable-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  margin: 1rem 0;
+  position: static !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* List view specific */
+.clickable-stats.list-view {
+  position: static !important;
+  width: 100% !important;
+  margin: 1rem 0 !important;
+  background: var(--gray-50) !important;
+  border: 1px solid var(--gray-200) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+
+
+/* Ensure it doesn't cover content */
+.clickable-stats:not(.map-view) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Individual stat items inside clickable-stats */
+.clickable-stats .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  transition: all 0.2s ease;
+  min-height: 80px;
+  cursor: pointer;
+}
+
+.clickable-stats .stat-item:hover {
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--primary) 10%, var(--gray-100)) 0%, 
+    color-mix(in srgb, var(--primary) 20%, var(--gray-100)) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.clickable-stats .stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.clickable-stats .stat-label {
+  font-size: 0.7rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Disabled state for stats without data */
+.clickable-stats .stat-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.clickable-stats .stat-item.disabled:hover {
+  background: var(--gray-100);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Active/selected state */
+.clickable-stats .stat-item.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+.clickable-stats .stat-item.active .stat-value,
+.clickable-stats .stat-item.active .stat-label {
+  color: white;
+}
+
+/* Link icon in best price values */
+.clickable-stats .best-price-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.clickable-stats .stat-link-icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.clickable-stats .stat-item:hover .stat-link-icon {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Crown icon for overall best */
+.clickable-stats .stat-crown-icon {
+  font-size: 0.875rem;
+  color: #f59e0b;
+}
+
+.clickable-stats .stat-item.active .stat-crown-icon {
+  color: white;
+}
+
+/* =========================================== */
+/* FIX LIST VIEW FOOTER POSITIONING           */
+/* =========================================== */
+
+/* Remove fixed/sticky positioning from list view footer */
+.list-view-footer {
+  position: static !important;
+  z-index: 1 !important;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-200);
+  width: 100%;
+}
+
+/* Make sure the stations grid container is scrollable and visible */
+.stations-grid-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+  z-index: 0;
+}
+
+/* Ensure the list view container has proper layout */
+.list-view-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px); /* Adjust based on your header/footer height */
+  overflow: hidden;
+}
+
+.list-view-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================== */
+/* RESPONSIVE FIXES                           */
+/* =========================================== */
+
+@media (max-width: 1200px) {
+  .clickable-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .clickable-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  .clickable-stats .stat-item {
+    padding: 0.5rem;
+    min-height: 70px;
+  }
+  
+  .clickable-stats .stat-value {
+    font-size: 1rem;
+  }
+  
+  .clickable-stats .stat-label {
+    font-size: 0.65rem;
+  }
+  
+  .clickable-stats.map-view {
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .clickable-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .clickable-stats.map-view {
+    bottom: 0.5rem !important;
+  }
+}
+
+/* =========================================== */
+/* OVERRIDES TO PREVENT COVERING              */
+/* =========================================== */
+
+/* Remove any problematic positioning */
+.clickable-stats,
+.clickable-stats.list-view {
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  inset: auto !important;
+}
+
+/* Ensure it doesn't block clicks on other elements */
+.clickable-stats {
+  pointer-events: auto;
+}
+
+/* Make sure stations grid is clickable */
+.stations-grid,
+.station-card,
+.station-grid-item {
+  pointer-events: auto;
+  position: relative;
+  z-index: 0;
+}
+
+/* Debug border (remove after fixing) */
+.debug-border {
+  border: 2px solid red !important;
+}
+
+/* Fix for dark mode */
+:root.dark .clickable-stats {
+  background:#111827 ;
+  border-color: #1f2937;
+}
+
+:root.dark .clickable-stats .stat-item {
+  
+  
+  background: #111827;
+  border-color: #1f2937;
+}
+
+:root.dark .clickable-stats .stat-item:hover {
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--primary) 20%, var(--gray-900)) 0%, 
+    color-mix(in srgb, var(--primary) 30%, var(--gray-900)) 100%
+  );
+}
+/* =========================================== */
+/* FIX SIDEBAR FOOTER OVERFLOW                */
+/* =========================================== */
+
+/* Sidebar footer container */
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  width: 100%;
+  box-sizing: border-box; /* Ensure padding is included in width */
+  overflow: hidden; /* Prevent content from overflowing */
+}
+
+/* Stats grid inside sidebar footer */
+.sidebar-footer .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding: 0; /* Remove extra padding */
+  max-width: 100%; /* Don't exceed container width */
+  margin: 0; /* Remove default margins */
+  box-sizing: border-box;
+}
+
+/* Individual stat items */
+.sidebar-footer .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  transition: all 0.2s ease;
+  min-height: 80px;
+  box-sizing: border-box;
+  width: 100%; /* Ensure full width of grid cell */
+  max-width: 100%; /* Don't exceed container */
+  overflow: hidden; /* Prevent content overflow */
+}
+
+/* Stat value text */
+.sidebar-footer .stat-value {
+  font-size: 1rem; /* Reduced from 1.8vw */
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* Stat label */
+.sidebar-footer .stat-label {
+  font-size: 0.7rem; /* Fixed size, not vw */
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Best price value container */
+.sidebar-footer .best-price-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Price text inside best price */
+.sidebar-footer .best-price-value span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 20px); /* Leave space for icon */
+}
+
+/* Icon in best price */
+.sidebar-footer .stat-link-icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  flex-shrink: 0; /* Don't shrink icon */
+}
+
+/* =========================================== */
+/* RESPONSIVE FIXES FOR SIDEBAR FOOTER        */
+/* =========================================== */
+
+@media (max-width: 1400px) {
+  .sidebar-footer .stat-value {
+    font-size: 0.9rem;
+  }
+  
+  .sidebar-footer .stat-label {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sidebar-footer .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-footer {
+    padding: 0.75rem;
+  }
+  
+  .sidebar-footer .stats-grid {
+    gap: 0.5rem;
+  }
+  
+  .sidebar-footer .stat-item {
+    padding: 0.5rem;
+    min-height: 70px;
+  }
+  
+  .sidebar-footer .stat-value {
+    font-size: 0.85rem;
+  }
+  
+  .sidebar-footer .stat-label {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar-footer .stats-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* =========================================== */
+/* FIX FOR SIDEBAR SCROLLING                  */
+/* =========================================== */
+
+/* Ensure sidebar has proper scrolling */
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Sidebar content area */
+.app-sidebar > *:not(.sidebar-footer) {
+  flex-shrink: 0;
+}
+
+/* Stations list (if present) */
+.app-sidebar .stations-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Sidebar footer at bottom */
+.app-sidebar .sidebar-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+/* =========================================== */
+/* SPECIFIC FIXES FOR YOUR CURRENT ISSUE      */
+/* =========================================== */
+
+/* Remove problematic vw units that cause overflow */
+.sidebar-footer .stats-grid {
+  gap: 0.75rem !important; /* Fixed value */
+  padding: 0 !important; /* Remove vw padding */
+}
+
+.sidebar-footer .stat-item {
+  padding: 0.75rem 0.5rem !important; /* Fixed values */
+}
+
+.sidebar-footer .stat-value {
+  font-size: 1rem !important; /* Fixed size */
+  margin-bottom: 0.25rem !important;
+}
+
+.sidebar-footer .stat-label {
+  font-size: 0.7rem !important; /* Fixed size */
+}
+
+/* Ensure no horizontal scrollbar */
+.app-sidebar,
+.sidebar-footer,
+.stats-grid {
+  overflow-x: hidden !important;
+}
+
+/* Container width fix */
+.app-sidebar {
+  width: 400px;
+  min-width: 400px;
+  max-width: 400px;
+}
+
+/* Dark mode adjustments */
+
+
+
+
+/* =========================================== */
+/* DEBUG BORDERS (remove after fixing)        */
+/* =========================================== */
+/*
+.sidebar-footer {
+  border: 2px solid red !important;
+}
+
+.stats-grid {
+  border: 2px solid blue !important;
+}
+
+.stat-item {
+  border: 2px solid green !important;
+}
+*/

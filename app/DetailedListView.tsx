@@ -28,7 +28,7 @@ import {
   FaChartLine,
   FaInfoCircle
 } from 'react-icons/fa';
-
+import { formatPrice, formatDistance, getCheapestFuel } from './utils/formatUtils';
 interface GasStation {
   id: string;
   name: string;
@@ -179,7 +179,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                   </td>
                   <td>
                     <div className="price-cell">
-                      <div className="price-value">€{station.diesel.toFixed(3)}</div>
+                      <div className="price-value">€{formatPrice(station.diesel)}</div>
                       {dieselDiff && (
                         <div className={`price-diff ${dieselDiff.isCheaper ? 'cheaper' : 'expensive'}`}>
                           {dieselDiff.isCheaper ? '▼' : '▲'} {Math.abs(dieselDiff.percentage).toFixed(1)}%
@@ -189,7 +189,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                   </td>
                   <td>
                     <div className="price-cell">
-                      <div className="price-value">€{station.e5.toFixed(3)}</div>
+                      <div className="price-value">€{formatPrice(station.e5)}</div>
                       {e5Diff && (
                         <div className={`price-diff ${e5Diff.isCheaper ? 'cheaper' : 'expensive'}`}>
                           {e5Diff.isCheaper ? '▼' : '▲'} {Math.abs(e5Diff.percentage).toFixed(1)}%
@@ -199,7 +199,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                   </td>
                   <td>
                     <div className="price-cell">
-                      <div className="price-value">€{station.e10.toFixed(3)}</div>
+                      <div className="price-value">€{formatPrice(station.e10)}</div>
                       {e10Diff && (
                         <div className={`price-diff ${e10Diff.isCheaper ? 'cheaper' : 'expensive'}`}>
                           {e10Diff.isCheaper ? '▼' : '▲'} {Math.abs(e10Diff.percentage).toFixed(1)}%
@@ -303,7 +303,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                     </div>
                     <div className="quick-stat">
                       <FaMoneyBillWave className="icon" />
-                      <span className="stat-value">€{cheapestFuel.toFixed(3)}</span>
+                      <span className="stat-value">€{formatPrice(cheapestFuel)}</span>
                       <span className="stat-label">Best Price</span>
                     </div>
                     {station.rating && (
@@ -359,7 +359,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                       {isCheapestDiesel && <span className="cheapest-badge">Cheapest</span>}
                     </div>
                     <div className="price-main">
-                      <span className="price-value-detailed">€{station.diesel.toFixed(3)}</span>
+                      <span className="price-value-detailed">€{formatPrice(station.diesel)}</span>
                       {dieselDiff && (
                         <div className={`price-trend ${dieselDiff.isCheaper ? 'down' : 'up'}`}>
                           <FaChartLine className="trend-icon" />
@@ -510,7 +510,7 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
                           if (navigator.share) {
                             navigator.share({
                               title: station.name,
-                              text: `Check out ${station.name} - Fuel prices: Diesel €${station.diesel.toFixed(3)}, E5 €${station.e5.toFixed(3)}, E10 €${station.e10.toFixed(3)}`,
+                              text: `Check out ${station.name} - Fuel prices: Diesel €${formatPrice(station.diesel)}, E5 €${formatPrice(station.e5)}, E10 €${formatPrice(station.e10)}`,
                               url: window.location.href
                             });
                           }
@@ -564,15 +564,15 @@ const DetailedListView: React.FC<DetailedListViewProps> = ({
           <div className="compact-prices">
             <div className="compact-price-item">
               <span className="compact-fuel-type">D</span>
-              <span className="compact-price">€{station.diesel.toFixed(3)}</span>
+              <span className="compact-price">€{formatPrice(station.diesel)}</span>
             </div>
             <div className="compact-price-item">
               <span className="compact-fuel-type">E5</span>
-              <span className="compact-price">€{station.e5.toFixed(3)}</span>
+              <span className="compact-price">€{formatPrice(station.e5)}</span>
             </div>
             <div className="compact-price-item">
               <span className="compact-fuel-type">E10</span>
-              <span className="compact-price">€{station.e10.toFixed(3)}</span>
+              <span className="compact-price">€{formatPrice(station.e10)}</span>
             </div>
           </div>
         </div>

@@ -1,6 +1,14 @@
 import React from 'react';
-import { FaExternalLinkAlt, FaCrown } from 'react-icons/fa';
-import { ClickableStatsProps, FuelType } from '../types/gasStationTypes';
+import { 
+  FaGasPump, 
+  FaMoneyBillWave, 
+  FaExternalLinkAlt,
+  FaCrown,
+  FaTrophy,
+  FaStore,
+  FaMapMarkerAlt
+} from 'react-icons/fa';
+import { ClickableStatsProps } from '../types/gasStationTypes';
 
 const ClickableStats: React.FC<ClickableStatsProps> = ({
   bestPrices,
@@ -11,88 +19,137 @@ const ClickableStats: React.FC<ClickableStatsProps> = ({
   selectedFuelType,
   isMapView = false
 }) => {
+  // Safe price formatting function
+  const formatPrice = (price: number | null | undefined): string => {
+    if (price === null || price === undefined || isNaN(price)) {
+      return 'N/A';
+    }
+    return `€${price.toFixed(3)}`;
+  };
+
+  // Safe handler for price clicks
+  const handlePriceClick = (stationId: string | undefined, fuelType?: any) => {
+    if (stationId && onPriceClick) {
+      onPriceClick(stationId, fuelType);
+    }
+  };
+
   return (
-    <div className="stats-grid">
-      <div className="stat-item">
-        <div className="stat-value">{openStationsCount}</div>
-        <div className="stat-label">Open Now</div>
-      </div>
-      
-      <div className="stat-item">
-        <div className="stat-value">€{averagePrice}</div>
-        <div className="stat-label">Avg Price</div>
-      </div>
-      
+    <div className={`clickable-stats ${isMapView ? 'map-view' : 'list-view'}`}>
+      {/* Overall Best Price */}
       <div 
-        className={`stat-item clickable-stat ${selectedFuelType === 'diesel' ? 'active' : ''}`}
-        onClick={() => bestPrices.diesel && onPriceClick(bestPrices.diesel.stationId, 'diesel')}
-        title={bestPrices.diesel ? 
-          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.diesel.stationName}` : 
-          'No best price available'}
+        className={`stat-item overall-best ${!bestPrices.overall ? 'disabled' : ''}`}
+        onClick={() => bestPrices.overall && handlePriceClick(bestPrices.overall.stationId, bestPrices.overall.type)}
       >
-        <div className="stat-value">
-          {bestPrices.diesel ? (
-            <div className="best-price-value">
-              <span>€{bestPrices.diesel.price.toFixed(3)}</span>
-              <FaExternalLinkAlt className="stat-link-icon" />
-            </div>
-          ) : '-'}
+        <div className="stat-icon">
+          <FaCrown />
         </div>
-        <div className="stat-label">Best Diesel</div>
+        <div className="stat-content">
+          <div className="stat-label">Best Overall</div>
+          <div className="stat-value">
+            {bestPrices.overall ? formatPrice(bestPrices.overall.price) : 'N/A'}
+          </div>
+          <div className="stat-station">
+            {bestPrices.overall?.stationName || 'No station'}
+          </div>
+        </div>
+        {bestPrices.overall && (
+          <FaExternalLinkAlt className="stat-link-icon" />
+        )}
       </div>
-      
+
+      {/* Diesel Best Price */}
       <div 
-        className={`stat-item clickable-stat ${selectedFuelType === 'e5' ? 'active' : ''}`}
-        onClick={() => bestPrices.e5 && onPriceClick(bestPrices.e5.stationId, 'e5')}
-        title={bestPrices.e5 ? 
-          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.e5.stationName}` : 
-          'No best price available'}
+        className={`stat-item diesel ${!bestPrices.diesel ? 'disabled' : ''} ${selectedFuelType === 'diesel' ? 'selected' : ''}`}
+        onClick={() => bestPrices.diesel && handlePriceClick(bestPrices.diesel.stationId, 'diesel')}
       >
-        <div className="stat-value">
-          {bestPrices.e5 ? (
-            <div className="best-price-value">
-              <span>€{bestPrices.e5.price.toFixed(3)}</span>
-              <FaExternalLinkAlt className="stat-link-icon" />
-            </div>
-          ) : '-'}
+        <div className="stat-icon">
+          <FaGasPump />
         </div>
-        <div className="stat-label">Best E5</div>
+        <div className="stat-content">
+          <div className="stat-label">Best Diesel</div>
+          <div className="stat-value">
+            {bestPrices.diesel ? formatPrice(bestPrices.diesel.price) : 'N/A'}
+          </div>
+          <div className="stat-station">
+            {bestPrices.diesel?.stationName || 'No station'}
+          </div>
+        </div>
+        {bestPrices.diesel && (
+          <FaExternalLinkAlt className="stat-link-icon" />
+        )}
       </div>
-      
+
+      {/* E5 Best Price */}
       <div 
-        className={`stat-item clickable-stat ${selectedFuelType === 'e10' ? 'active' : ''}`}
-        onClick={() => bestPrices.e10 && onPriceClick(bestPrices.e10.stationId, 'e10')}
-        title={bestPrices.e10 ? 
-          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.e10.stationName}` : 
-          'No best price available'}
+        className={`stat-item e5 ${!bestPrices.e5 ? 'disabled' : ''} ${selectedFuelType === 'e5' ? 'selected' : ''}`}
+        onClick={() => bestPrices.e5 && handlePriceClick(bestPrices.e5.stationId, 'e5')}
       >
-        <div className="stat-value">
-          {bestPrices.e10 ? (
-            <div className="best-price-value">
-              <span>€{bestPrices.e10.price.toFixed(3)}</span>
-              <FaExternalLinkAlt className="stat-link-icon" />
-            </div>
-          ) : '-'}
+        <div className="stat-icon">
+          <FaGasPump />
         </div>
-        <div className="stat-label">Best E10</div>
+        <div className="stat-content">
+          <div className="stat-label">Best E5</div>
+          <div className="stat-value">
+            {bestPrices.e5 ? formatPrice(bestPrices.e5.price) : 'N/A'}
+          </div>
+          <div className="stat-station">
+            {bestPrices.e5?.stationName || 'No station'}
+          </div>
+        </div>
+        {bestPrices.e5 && (
+          <FaExternalLinkAlt className="stat-link-icon" />
+        )}
       </div>
-      
+
+      {/* E10 Best Price */}
       <div 
-        className={`stat-item clickable-stat ${selectedFuelType === 'all' ? 'active' : ''}`}
-        onClick={() => bestPrices.overall && onPriceClick(bestPrices.overall.stationId, bestPrices.overall.type)}
-        title={bestPrices.overall ? 
-          `Click to ${isMapView ? 'fly to' : 'view'} ${bestPrices.overall.stationName}` : 
-          'No best price available'}
+        className={`stat-item e10 ${!bestPrices.e10 ? 'disabled' : ''} ${selectedFuelType === 'e10' ? 'selected' : ''}`}
+        onClick={() => bestPrices.e10 && handlePriceClick(bestPrices.e10.stationId, 'e10')}
       >
-        <div className="stat-value">
-          {bestPrices.overall ? (
-            <div className="best-price-value">
-              <span>€{bestPrices.overall.price.toFixed(3)}</span>
-              <FaCrown className="stat-crown-icon" />
-            </div>
-          ) : '-'}
+        <div className="stat-icon">
+          <FaGasPump />
         </div>
-        <div className="stat-label">Best Overall</div>
+        <div className="stat-content">
+          <div className="stat-label">Best E10</div>
+          <div className="stat-value">
+            {bestPrices.e10 ? formatPrice(bestPrices.e10.price) : 'N/A'}
+          </div>
+          <div className="stat-station">
+            {bestPrices.e10?.stationName || 'No station'}
+          </div>
+        </div>
+        {bestPrices.e10 && (
+          <FaExternalLinkAlt className="stat-link-icon" />
+        )}
+      </div>
+
+      {/* Station Stats */}
+      <div className="stat-item stations">
+        <div className="stat-icon">
+          <FaStore />
+        </div>
+        <div className="stat-content">
+          <div className="stat-label">Stations</div>
+          <div className="stat-value">{openStationsCount}/{sortedStationsLength}</div>
+          <div className="stat-station">Open/Total</div>
+        </div>
+      </div>
+
+      {/* Average Price */}
+      <div className="stat-item average">
+        <div className="stat-icon">
+          <FaMoneyBillWave />
+        </div>
+        <div className="stat-content">
+          <div className="stat-label">Avg Price</div>
+          <div className="stat-value">
+            {averagePrice && !isNaN(parseFloat(averagePrice)) 
+              ? `€${parseFloat(averagePrice).toFixed(3)}` 
+              : 'N/A'}
+          </div>
+          <div className="stat-station">All Fuels</div>
+        </div>
       </div>
     </div>
   );
