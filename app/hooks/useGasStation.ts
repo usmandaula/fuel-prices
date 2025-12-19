@@ -45,9 +45,20 @@ export const useGasStations = (options: UseGasStationsOptions = {}) => {
       setData(stationsData);
       return stationsData;
     } catch (err) {
-      const apiError = handleGasStationAPIError(err);
-      setError(apiError.message);
-      throw apiError;
+     const apiError = handleGasStationAPIError(err);
+  
+  // Handle different error formats
+  if (typeof apiError === 'string') {
+    setError(apiError);
+    throw new Error(apiError);
+  } else if (apiError && typeof apiError === 'object' && apiError.message) {
+    setError(apiError.message);
+    throw apiError;
+  } else {
+    const defaultError = 'An unknown error occurred';
+    setError(defaultError);
+    throw new Error(defaultError);
+  }
     } finally {
       setLoading(false);
     }

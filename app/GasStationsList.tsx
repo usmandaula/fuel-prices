@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
+import { FaInfoCircle } from 'react-icons/fa';
 import { GasStationsListProps } from './types/gasStationTypes';
-import { calculateDistance } from './utils/distanceCalculator';
 import Navbar from './components/layouts/Navbar';
 import Footer from './components/layouts/Footer';
 import MapViewLayout from './components/layouts/MapViewLayout';
@@ -19,16 +19,17 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
   radius,
   onRadiusChange 
 }) => {
-  // STATE DECLARATIONS - must come before any hook that uses them
+  // STATE DECLARATIONS
   const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
-  'fuelFinder_viewMode', 
-  'map'
-);
+    'fuelFinder_viewMode', 
+    'map'
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
   const [isLocating, setIsLocating] = useState(false);
+  
+  // Custom hooks
   const { isDarkMode, toggleDarkMode } = useDarkMode();
-  // Use custom hooks
+  
   const {
     userLocation,
     searchedLocation,
@@ -62,20 +63,17 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
     getDirections
   } = useDataProcessing(data, userLocation, viewMode);
 
-
-
   // Toggle functions
   const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
-  }, [isSidebarCollapsed]);
+    setIsSidebarCollapsed(prev => !prev);
+  }, []);
 
-
-  // Validate data
-  if (!data.ok || data.status !== 'ok' || !Array.isArray(data.stations)) {
+  // Data validation - moved before hooks to prevent conditional hook calls
+  if (!data || data.status !== 'ok' || !Array.isArray(data.stations)) {
     return (
-      <div className="error-container">
+      <div className={`error-container ${isDarkMode ? 'dark' : ''}`}>
         <div className="error-content">
-          <FaInfoCircle className="error-icon" />
+          <FaInfoCircle className="error-icon" size={48} />
           <h2>Unable to Load Data</h2>
           <p>Please check your connection and try again.</p>
           <button className="retry-btn">Retry</button>
@@ -83,6 +81,30 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
       </div>
     );
   }
+
+  // Common props for both view layouts
+  const commonLayoutProps = {
+    sortedStations,
+    selectedStation,
+    setSelectedStation,
+    sortBy,
+    sortDirection,
+    setSortBy,
+    setSortDirection,
+    showOnlyOpen,
+    setShowOnlyOpen,
+    priceFilter,
+    setPriceFilter,
+    openStationsCount,
+    averagePrice,
+    bestPrices,
+    handleBestPriceClick,
+    isSidebarCollapsed,
+    toggleSidebar,
+    isDarkMode,
+    radius,
+    onRadiusChange
+  };
 
   return (
     <div className={`gas-stations-app-enhanced ${isDarkMode ? 'dark' : ''}`}>
@@ -98,26 +120,9 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
       <main className="app-main">
         {viewMode === 'map' ? (
           <MapViewLayout
-            sortedStations={sortedStations}
-            selectedStation={selectedStation}
-            setSelectedStation={setSelectedStation}
+            {...commonLayoutProps}
             userLocation={userLocation}
             searchedLocation={searchedLocation}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            setSortBy={setSortBy}
-            setSortDirection={setSortDirection}
-            showOnlyOpen={showOnlyOpen}
-            setShowOnlyOpen={setShowOnlyOpen}
-            priceFilter={priceFilter}
-            setPriceFilter={setPriceFilter}
-            openStationsCount={openStationsCount}
-            averagePrice={averagePrice}
-            bestPrices={bestPrices}
-            handleBestPriceClick={handleBestPriceClick}
-            isSidebarCollapsed={isSidebarCollapsed}
-            toggleSidebar={toggleSidebar}
-            isDarkMode={isDarkMode}
             mapLayer={mapLayer}
             showTraffic={showTraffic}
             setMapLayer={setMapLayer}
@@ -126,34 +131,13 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
             mapZoom={mapZoom}
             setMapZoom={setMapZoom}
             getDirections={getDirections}
-            radius={radius}
-            onRadiusChange={onRadiusChange}
           />
         ) : (
           <ListViewLayout
-            sortedStations={sortedStations}
-            selectedStation={selectedStation}
-            setSelectedStation={setSelectedStation}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            setSortBy={setSortBy}
-            setSortDirection={setSortDirection}
-            showOnlyOpen={showOnlyOpen}
-            setShowOnlyOpen={setShowOnlyOpen}
-            priceFilter={priceFilter}
-            setPriceFilter={setPriceFilter}
-            openStationsCount={openStationsCount}
-            averagePrice={averagePrice}
-            bestPrices={bestPrices}
-            handleBestPriceClick={handleBestPriceClick}
-            isSidebarCollapsed={isSidebarCollapsed}
-            toggleSidebar={toggleSidebar}
-            isDarkMode={isDarkMode}
+            {...commonLayoutProps}
             isLocating={isLocating}
             getUserLocation={getUserLocation}
             scrollToStation={scrollToStation}
-            radius={radius}
-            onRadiusChange={onRadiusChange}
           />
         )}
       </main>

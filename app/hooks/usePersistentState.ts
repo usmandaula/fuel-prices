@@ -1,3 +1,4 @@
+// app/hooks/usePersistentState.ts - Updated version
 import { useState, useEffect } from 'react';
 
 export function usePersistentState<T>(
@@ -5,11 +6,14 @@ export function usePersistentState<T>(
   defaultValue: T
 ): [T, (value: T) => void] {
   const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return defaultValue;
+    // SSR check
+    if (typeof window === 'undefined') {
+      return defaultValue;
+    }
     
     try {
-      const storedValue = localStorage.getItem(key);
-      return storedValue ? JSON.parse(storedValue) : defaultValue;
+      const stored = window.localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultValue;
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
       return defaultValue;
@@ -17,12 +21,12 @@ export function usePersistentState<T>(
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(key, JSON.stringify(state));
-      } catch (error) {
-        console.error(`Error saving to localStorage key "${key}":`, error);
-      }
+    if (typeof window === 'undefined') return;
+    
+    try {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    } catch (error) {
+      console.error(`Error saving to localStorage key "${key}":`, error);
     }
   }, [key, state]);
 
