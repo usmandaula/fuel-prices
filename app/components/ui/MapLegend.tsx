@@ -25,14 +25,7 @@ const MapLegend: React.FC = () => {
           <div className="legend-color searched"></div>
           <span>Search Location</span>
         </div>
-        <div className="legend-item">
-          <div className="legend-color best-fuel"></div>
-          <span>Best Fuel Price</span>
-        </div>
-        <div className="legend-item">
-          <div className="legend-color best-overall"></div>
-          <span>Best Overall Price</span>
-        </div>
+        
       </div>
     </div>
   );

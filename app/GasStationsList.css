@@ -4008,6 +4008,7 @@ body {
   justify-content: center;
   min-width: 70px;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  color: black;
 }
 
 .dark .current-radius-display {
