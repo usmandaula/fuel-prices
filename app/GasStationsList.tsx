@@ -10,6 +10,8 @@ import ListViewLayout from './components/layouts/ListViewLayout';
 import { useDataProcessing } from './hooks/useDataProcessing';
 import { useLocation } from './hooks/useLocation';
 import { useDarkMode } from './hooks/useDarkMode';
+import { usePersistentState } from './hooks/usePersistentState';
+
 const GasStationsList: React.FC<GasStationsListProps> = ({ 
   data, 
   initialUserLocation,
@@ -18,7 +20,10 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
   onRadiusChange 
 }) => {
   // STATE DECLARATIONS - must come before any hook that uses them
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+  const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
+  'fuelFinder_viewMode', 
+  'map'
+);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [isLocating, setIsLocating] = useState(false);
@@ -56,6 +61,8 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
     setMapZoom,
     getDirections
   } = useDataProcessing(data, userLocation, viewMode);
+
+
 
   // Toggle functions
   const toggleSidebar = useCallback(() => {
