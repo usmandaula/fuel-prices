@@ -253,3 +253,66 @@ it('retries on server error and succeeds', async () => {
   });
 
 });
+/* ------------------------------------------------------------------ */
+/* Additional tests for 100% coverage                                 */
+/* ------------------------------------------------------------------ */
+
+describe('Additional coverage tests', () => {
+
+    
+
+
+
+
+  describe('fetchGasStationsWithRetry edge cases', () => {
+    it('fails after max retries', async () => {
+      mockAxiosInstance.get
+        .mockRejectedValue({ isAxiosError: true, response: { status: 500 } });
+
+      await expect(fetchGasStationsWithRetry(52, 13, 5, { apiKey: 'valid-key', maxRetries: 2, retryDelay: 1 }))
+        .rejects.toThrow('Failed to fetch gas stations. Please try again.');
+    });
+  });
+
+  describe('fetchStationDetails edge cases', () => {
+    it('throws error if ok=false', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ok: false } });
+      await expect(fetchStationDetails('1', 'valid-key')).rejects.toThrow('Failed to fetch station details');
+    });
+
+    it('throws network error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+      await expect(fetchStationDetails('1', 'valid-key')).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('fetchPrices edge cases', () => {
+    it('throws if ok=false', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ok: false } });
+      await expect(fetchPrices(['1'])).rejects.toThrow('Failed to fetch prices');
+    });
+
+    it('throws network error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Network error'));
+      await expect(fetchPrices(['1'])).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('fetchNearbyGasStations edge cases', () => {
+    it('handles position unavailable', async () => {
+      // @ts-ignore
+      global.navigator.geolocation = { getCurrentPosition: jest.fn((_s, err) => err({ code: 2 })) };
+      await expect(fetchNearbyGasStations(5, { apiKey: 'valid-key' }))
+        .rejects.toThrow('Location information is unavailable. Please check your device location services.');
+    });
+  });
+
+  describe('handleApiError branches', () => {
+    it('throws for unknown error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce('Unexpected error');
+      await expect(fetchGasStations(52, 13, 5, { apiKey: 'valid-key' }))
+        .rejects.toThrow('Failed to fetch gas stations. Please try again.');
+    });
+  });
+
+});
