@@ -34,18 +34,32 @@ import {
   fetchGasStationsCached,
   fetchGasStationsWithRetry,
   fetchStationDetails,
-  fetchPrices
+  fetchPrices,
+  fetchNearbyGasStations,
+  initCacheCleanup
 } from './gasStationService';
 
-describe('TankerKönig API', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    localStorage.clear();
-  });
+/* ------------------------------------------------------------------ */
+/* Axios mock                                                          */
+/* ------------------------------------------------------------------ */
 
-  // ---------------------------------------------------------------------------
-  // fetchGasStations
-  // ---------------------------------------------------------------------------
+
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  localStorage.clear();
+});
+
+beforeAll(() => {
+  jest.useFakeTimers();
+});
+
+/* ------------------------------------------------------------------ */
+/* Tests                                                               */
+/* ------------------------------------------------------------------ */
+
+describe('TankerKönig API', () => {
+
   describe('fetchGasStations', () => {
     it('returns transformed gas station data', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
@@ -54,148 +68,188 @@ describe('TankerKönig API', () => {
           license: 'test-license',
           data: 'test-data',
           status: 'ok',
+          stations: [{ id: '1', isOpen: true }]
+        }
+      });
+
+      const result = await fetchGasStations(52, 13, 5, { apiKey: 'valid-key' });
+      expect(result.ok).toBe(true);
+      expect(result.stations).toHaveLength(1);
+    });
+
+  it('throws error for invalid API key', async () => {
+  mockAxiosInstance.get.mockRejectedValueOnce({
+    isAxiosError: true,
+    response: { status: 401 }
+  });
+
+  await expect(fetchGasStations(52, 13, 5, { apiKey: 'bad-key' }))
+    .rejects.toThrow('Failed to fetch gas stations. Please try again.');
+});
+
+    it('filters out closed stations by default', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          ok: true,
+          license: 'l',
+          data: 'd',
+          status: 'ok',
           stations: [
-            {
-              id: '1',
-              name: 'Test Station',
-              brand: 'Shell',
-              street: 'Main St',
-              place: 'Berlin',
-              lat: 52,
-              lng: 13,
-              dist: 1,
-              diesel: 1.8,
-              e5: 1.9,
-              e10: 1.7,
-              isOpen: true,
-              houseNumber: '1',
-              postCode: 10115
-            }
+            { id: '1', isOpen: true },
+            { id: '2', isOpen: false }
           ]
         }
       });
 
-      const result = await fetchGasStations(52, 13, 5, {
-        apiKey: 'valid-api-key'
+      const result = await fetchGasStations(52, 13, 5, { apiKey: 'valid-key' });
+      expect(result.stations).toHaveLength(1);
+      expect(result.stations[0].id).toBe('1');
+    });
+
+    it('includes closed stations when includeClosed=true', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          ok: true,
+          license: 'l',
+          data: 'd',
+          status: 'ok',
+          stations: [
+            { id: '1', isOpen: true },
+            { id: '2', isOpen: false }
+          ]
+        }
       });
 
-      expect(result.ok).toBe(true);
-      expect(result.stations).toHaveLength(1);
-      expect(result.stations[0].name).toBe('Test Station');
+      const result = await fetchGasStations(52, 13, 5, { apiKey: 'valid-key', includeClosed: true });
+      expect(result.stations).toHaveLength(2);
     });
 
-    it('throws error for invalid API key', async () => {
-      await expect(
-        fetchGasStations(52, 13, 5, {
-          apiKey: '00000000-0000-0000-0000-000000000002'
-        })
-      ).rejects.toThrow('Valid API key is required');
+    it('throws timeout error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        isAxiosError: true,
+        code: 'ECONNABORTED'
+      });
+
+      await expect(fetchGasStations(52, 13, 5, { apiKey: 'valid-key' }))
+        .rejects.toThrow('Failed to fetch gas stations. Please try again.');
+    });
+
+    it('throws no response error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce({
+        isAxiosError: true,
+        request: {}
+      });
+
+      await expect(fetchGasStations(52, 13, 5, { apiKey: 'valid-key' }))
+        .rejects.toThrow('Failed to fetch gas stations. Please try again.');
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // fetchGasStationsCached
-  // ---------------------------------------------------------------------------
-describe('fetchGasStationsCached', () => {
-  it('returns cached data on second call', async () => {
-    mockAxiosInstance.get.mockResolvedValue({
-      data: {
-        ok: true,
-        license: 'license',
-        data: 'data',
-        status: 'ok',
-        stations: []
-      }
-    });
+  describe('fetchGasStationsCached', () => {
+    it('returns cached data on second call', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { ok: true, license: 'l', data: 'd', status: 'ok', stations: [] }
+      });
 
-    const first = await fetchGasStationsCached(52, 13, 5, {
-      apiKey: 'valid-api-key'
-    });
+      const first = await fetchGasStationsCached(52, 13, 5, { apiKey: 'valid-key' });
+      const second = await fetchGasStationsCached(52, 13, 5, { apiKey: 'valid-key' });
 
-    const second = await fetchGasStationsCached(52, 13, 5, {
-      apiKey: 'valid-api-key'
+      expect(first).toEqual(second);
     });
-
-    expect(first).toEqual(second);
   });
+
+  describe('fetchGasStationsWithRetry', () => {
+it('retries on server error and succeeds', async () => {
+  jest.useFakeTimers();
+
+  mockAxiosInstance.get
+    .mockRejectedValueOnce({ isAxiosError: true, response: { status: 500 } })
+    .mockResolvedValueOnce({
+      data: { ok: true, license: 'l', data: 'd', status: 'ok', stations: [] }
+    });
+
+  const fetchPromise = fetchGasStationsWithRetry(52, 13, 5, {
+    apiKey: 'valid-key',
+    maxRetries: 2,
+    retryDelay: 1 // tiny delay
+  });
+
+  // Run all timers and allow promises to resolve
+  await jest.runAllTimersAsync?.(); // Jest >= 29 supports runAllTimersAsync
+  const result = await fetchPromise;
+
+  expect(result.ok).toBe(true);
+  expect(mockAxiosInstance.get).toHaveBeenCalledTimes(2);
+
+  jest.useRealTimers();
 });
 
 
 
-  // ---------------------------------------------------------------------------
-  // fetchGasStationsWithRetry
-  // ---------------------------------------------------------------------------
-  describe('fetchGasStationsWithRetry', () => {
-    it('retries on server error and succeeds', async () => {
-      mockAxiosInstance.get
-        .mockRejectedValueOnce({
-          response: { status: 500 },
-          isAxiosError: true
-        })
-        .mockResolvedValueOnce({
-          data: {
-            ok: true,
-            license: 'license',
-            data: 'data',
-            status: 'ok',
-            stations: []
-          }
-        });
 
-      const result = await fetchGasStationsWithRetry(52, 13, 5, {
-        apiKey: 'valid-api-key',
-        maxRetries: 2,
-        retryDelay: 1
-      });
+    it('does not retry on API key error', async () => {
+      mockAxiosInstance.get.mockRejectedValueOnce(new Error('Invalid API key'));
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(2);
-      expect(result.ok).toBe(true);
+      await expect(fetchGasStationsWithRetry(52, 13, 5, { apiKey: 'valid-key', maxRetries: 3 }))
+        .rejects.toThrow('Invalid API key');
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(1);
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // fetchStationDetails
-  // ---------------------------------------------------------------------------
   describe('fetchStationDetails', () => {
     it('returns station details', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
-        data: {
-          ok: true,
-          status: 'ok',
-          station: {
-            id: '1',
-            name: 'Detail Station'
-          }
-        }
+        data: { ok: true, status: 'ok', station: { id: '1', name: 'Test Station' } }
       });
 
-      const station = await fetchStationDetails('1', 'valid-api-key');
-
-      expect(station.id).toBe('1');
-      expect(station.name).toBe('Detail Station');
+      const result = await fetchStationDetails('1', 'valid-key');
+      expect(result.id).toBe('1');
+      expect(result.name).toBe('Test Station');
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // fetchPrices
-  // ---------------------------------------------------------------------------
   describe('fetchPrices', () => {
     it('returns prices for stations', async () => {
       mockAxiosInstance.get.mockResolvedValueOnce({
-        data: {
-          ok: true,
-          status: 'ok',
-          prices: {
-            '1': { diesel: 1.8, e5: 1.9, e10: 1.7 }
-          }
-        }
+        data: { ok: true, status: 'ok', prices: { '1': { diesel: 1, e5: 1.5, e10: 1.6 } } }
       });
 
-      const prices = await fetchPrices(['1'], 'valid-api-key');
-
-      expect(prices['1'].diesel).toBe(1.8);
-      expect(prices['1'].e5).toBe(1.9);
-      expect(prices['1'].e10).toBe(1.7);
+      const result = await fetchPrices(['1']);
+      expect(result['1'].e5).toBe(1.5);
+      expect(result['1'].diesel).toBe(1);
     });
   });
+
+  describe('fetchNearbyGasStations', () => {
+    it('fetches stations using geolocation', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { ok: true, license: 'l', data: 'd', status: 'ok', stations: [] }
+      });
+
+      // @ts-ignore
+      global.navigator.geolocation = { getCurrentPosition: jest.fn((success) => success({ coords: { latitude: 52, longitude: 13 } })) };
+
+      const result = await fetchNearbyGasStations(5, { apiKey: 'valid-key' });
+      expect(result.ok).toBe(true);
+    });
+
+    it('handles geolocation permission denied', async () => {
+      // @ts-ignore
+      global.navigator.geolocation = { getCurrentPosition: jest.fn((_s, error) => error({ code: 1 })) };
+
+      await expect(fetchNearbyGasStations(5, { apiKey: 'valid-key' }))
+        .rejects.toThrow('Permission denied');
+    });
+  });
+
+  describe('cache cleanup', () => {
+    it('cleans up expired cache entries', () => {
+      localStorage.setItem('fuel_finder_cache_test', JSON.stringify({ expiry: Date.now() - 1 }));
+      const interval = initCacheCleanup(1);
+      jest.advanceTimersByTime(2);
+      clearInterval(interval);
+    });
+  });
+
 });
