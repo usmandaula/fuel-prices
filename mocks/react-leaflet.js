@@ -1,135 +1,30 @@
-import React from 'react';
+// __mocks__/react-leaflet.js
+const React = require('react');
 
-// Mock all react-leaflet components
-export const MapContainer = ({ children, center, zoom, style, ref, className }) => {
-  return React.createElement('div', {
-    'data-testid': 'map-container',
-    className,
-    ref,
-    style,
-    'data-center': JSON.stringify(center),
-    'data-zoom': zoom
-  }, children);
+const MockComponent = (props) => {
+  const testId = props['data-testid'] || 'mock-component';
+  return React.createElement('div', { 'data-testid': testId, onClick: props.onClick }, props.children);
 };
 
-export const TileLayer = ({ url, attribution }) => {
-  return React.createElement('div', {
-    'data-testid': 'tile-layer',
-    'data-url': url,
-    'data-attribution': attribution
-  });
-};
-
-export const Marker = ({ position, icon, children, eventHandlers }) => {
-  const onClick = (e) => {
-    if (eventHandlers?.click) {
-      const mockEvent = {
-        stopPropagation: jest.fn(),
-        preventDefault: jest.fn(),
-        target: { closest: () => null }
-      };
-      eventHandlers.click(mockEvent);
-    }
-  };
-  
-  return React.createElement('div', {
-    'data-testid': 'marker',
-    'data-position': JSON.stringify(position),
-    onClick
-  }, children);
-};
-
-export const Popup = ({ children }) => {
-  return React.createElement('div', {
-    'data-testid': 'popup'
-  }, children);
-};
-
-export const Circle = ({ center, radius, pathOptions }) => {
-  return React.createElement('div', {
-    'data-testid': 'circle',
-    'data-center': JSON.stringify(center),
-    'data-radius': radius
-  });
-};
-
-export const ZoomControl = ({ position }) => {
-  return React.createElement('div', {
-    'data-testid': 'zoom-control',
-    'data-position': position
-  });
-};
-
-export const ScaleControl = ({ position, imperial }) => {
-  return React.createElement('div', {
-    'data-testid': 'scale-control',
-    'data-position': position,
-    'data-imperial': imperial
-  });
-};
-
-export const LayersControl = ({ children, position }) => {
-  return React.createElement('div', {
-    'data-testid': 'layers-control',
-    'data-position': position
-  }, children);
-};
-
-export const BaseLayer = ({ children, checked, name }) => {
-  return React.createElement('div', {
-    'data-testid': 'base-layer',
-    'data-checked': checked,
-    'data-name': name
-  }, children);
-};
-
-export const useMap = () => ({
-  setView: jest.fn(),
-  flyTo: jest.fn(),
-  getZoom: jest.fn(() => 13),
-  on: jest.fn(),
-  removeLayer: jest.fn(),
-  addLayer: jest.fn(),
-  latLngToContainerPoint: jest.fn(() => ({ x: 0, y: 0 })),
-  containerPointToLatLng: jest.fn(() => [52.52, 13.405]),
-  getBounds: jest.fn(() => ({
-    getSouthWest: jest.fn(() => ({ lat: 52.51, lng: 13.39 })),
-    getNorthEast: jest.fn(() => ({ lat: 52.53, lng: 13.42 }))
-  }))
-});
-
-export const useMapEvents = (handlers) => {
-  // Simulate map events
-  React.useEffect(() => {
-    Object.entries(handlers).forEach(([event, handler]) => {
-      if (typeof handler === 'function') {
-        // Simulate initial call for certain events
-        if (event === 'zoomend') {
-          setTimeout(() => handler(), 0);
-        }
-      }
-    });
-  }, [handlers]);
-  
-  return {
-    getZoom: () => 13,
-    flyTo: jest.fn(),
-    setView: jest.fn()
-  };
-};
-
-// Mock for LayersControl
-export const LayersControl = ({ children, position }) => {
-  return React.createElement('div', {
-    'data-testid': 'layers-control',
-    'data-position': position
-  }, children);
-};
-
+const MapContainer = (props) => React.createElement(MockComponent, { 'data-testid': 'map-container', ...props });
+const TileLayer = (props) => React.createElement(MockComponent, { 'data-testid': 'tile-layer', ...props });
+const Marker = (props) => React.createElement(MockComponent, { 'data-testid': 'marker', ...props });
+const Popup = (props) => React.createElement(MockComponent, { 'data-testid': 'popup', ...props });
+const Circle = (props) => React.createElement(MockComponent, { 'data-testid': 'circle', ...props });
+const ZoomControl = (props) => React.createElement(MockComponent, { 'data-testid': 'zoom-control', ...props });
+const ScaleControl = (props) => React.createElement(MockComponent, { 'data-testid': 'scale-control', ...props });
+const BaseLayer = (props) => React.createElement(MockComponent, { 'data-testid': 'base-layer', ...props });
+const LayersControl = (props) => React.createElement(MockComponent, { 'data-testid': 'layers-control', ...props });
 LayersControl.BaseLayer = BaseLayer;
 
-// Default export for compatibility
-export default {
+const useMap = () => ({
+  setView: jest.fn(),
+  flyTo: jest.fn(),
+  getZoom: () => 13,
+});
+const useMapEvents = () => ({ getZoom: () => 13 });
+
+module.exports = {
   MapContainer,
   TileLayer,
   Marker,
@@ -139,5 +34,5 @@ export default {
   ScaleControl,
   LayersControl,
   useMap,
-  useMapEvents
+  useMapEvents,
 };
