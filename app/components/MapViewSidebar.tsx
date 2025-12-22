@@ -33,9 +33,13 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           {onToggleSidebar && (
-            <button className="sidebar-toggle-btn" onClick={onToggleSidebar}>
-              {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-            </button>
+            <button 
+    className="sidebar-toggle-btn" 
+    onClick={onToggleSidebar}
+    aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+  >
+    {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+  </button>
           )}
           <h2>Map View</h2>
         </div>
