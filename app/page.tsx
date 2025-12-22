@@ -1,21 +1,21 @@
-"use client"
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import GasStationsList from './GasStationsList';
-import './GasStationsList.css';
-import { fetchGasStations, fetchGasStationsCached } from './services/gasStationService';
+"use client";
+
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import GasStationsList from "./GasStationsList";
+import "./GasStationsList.css";
+import { fetchGasStationsCached } from "./services/gasStationService";
 
 // Constants
 const DEFAULT_LOCATION = {
   lat: 52.521,
   lng: 13.438,
-  name: 'Berlin, Germany'
+  name: "Berlin, Germany",
 } as const;
 
-const RADIUS_OPTIONS = [1, 3, 5, 10, 15, 25] as const;
 const GEOLOCATION_CONFIG = {
   enableHighAccuracy: true,
   timeout: 10000,
-  maximumAge: 0
+  maximumAge: 0,
 } as const;
 
 // Types
@@ -38,262 +38,220 @@ const App: React.FC = () => {
   const [gasStationData, setGasStationData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<UserLocation>(DEFAULT_LOCATION);
-  const [radius, setRadius] = useState<number>(5); // Default radius in km
+  const [userLocation, setUserLocation] =
+    useState<UserLocation>(DEFAULT_LOCATION);
+  const [radius, setRadius] = useState<number>(5);
 
   // Memoized values
-  const geolocationSupported = useMemo(() => 
-    typeof navigator !== 'undefined' && 'geolocation' in navigator, 
+  const geolocationSupported = useMemo(
+    () => typeof navigator !== "undefined" && "geolocation" in navigator,
     []
   );
 
   /**
-   * Fetch gas station data with error handling and caching
+   * Save search state (SAFE)
    */
-  const fetchGasStationsData = useCallback(async (
-    lat: number, 
-    lng: number, 
-    radius: number, 
-    locationName: string
-  ) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-  //    console.log(`Fetching gas stations: ${lat}, ${lng}, radius: ${radius}km`);
-      
-      // Use cached API call for better performance
-      const data = await fetchGasStationsCached(lat, lng, radius);
-      
-    //  console.log('Data fetched successfully');
-      setGasStationData(data);
-      setUserLocation({ lat, lng, name: locationName });
-      
-      // Save search state
-      saveSearchState(lat, lng, locationName, radius);
-      
-    } catch (err) {
-      handleFetchError(err, lat, lng, radius, locationName);
-    } finally {
-      setLoading(false);
-    }
+  const saveSearchState = useCallback((state: SearchState) => {
+    localStorage.setItem(
+      "lastGasStationSearch",
+      JSON.stringify(state)
+    );
   }, []);
 
   /**
-   * Save search state to localStorage
+   * Fetch gas station data
    */
-  const saveSearchState = useCallback((
-    lat: number, 
-    lng: number, 
-    name: string, 
-    radius: number
-  ) => {
-    const searchState: SearchState = {
-      lat,
-      lng,
-      name,
-      radius,
-      timestamp: Date.now()
-    };
-    localStorage.setItem('lastGasStationSearch', JSON.stringify(searchState));
-  }, []);
+  const fetchGasStationsData = useCallback(
+    async (lat: number, lng: number, radius: number, locationName: string) => {
+      setLoading(true);
+      setError(null);
 
-  /**
-   * Handle fetch errors with fallback strategies
-   */
-  const handleFetchError = useCallback((
-    err: unknown,
-    lat: number,
-    lng: number,
-    radius: number,
-    locationName: string
-  ) => {
-    const errorMessage = err instanceof Error ? err.message : 'Failed to fetch gas station data';
-    console.error('Fetch error:', errorMessage);
-    setError(errorMessage);
-    
-    // Try to load cached API response
-    const cachedKey = `gas_stations_${lat}_${lng}_${radius}_${process.env.NEXT_PUBLIC_TANKERKOENIG_API_KEY || 'default'}`;
-    const cached = localStorage.getItem(cachedKey);
-    
-    if (cached) {
       try {
-        const { data } = JSON.parse(cached);
-        console.log('Using cached API response');
+        const data = await fetchGasStationsCached(lat, lng, radius);
+
         setGasStationData(data);
         setUserLocation({ lat, lng, name: locationName });
-      } catch (cacheError) {
-        console.error('Cache parse error:', cacheError);
+
+        // ✅ Save ONLY valid state
+        if (
+          typeof lat === "number" &&
+          typeof lng === "number" &&
+          typeof radius === "number" &&
+          locationName
+        ) {
+          saveSearchState({
+            lat,
+            lng,
+            name: locationName,
+            radius,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (err) {
+        handleFetchError(err, lat, lng, radius, locationName);
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    },
+    [saveSearchState]
+  );
 
   /**
-   * Get user's current location
+   * Handle fetch errors with cache fallback
+   */
+  const handleFetchError = useCallback(
+    (
+      err: unknown,
+      lat: number,
+      lng: number,
+      radius: number,
+      locationName: string
+    ) => {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch gas station data";
+
+      setError(errorMessage);
+
+      const cacheKey = `gas_stations_${lat}_${lng}_${radius}_${
+        process.env.NEXT_PUBLIC_TANKERKOENIG_API_KEY || "default"
+      }`;
+
+      const cached = localStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const { data } = JSON.parse(cached);
+          setGasStationData(data);
+          setUserLocation({ lat, lng, name: locationName });
+        } catch {
+          // ignore corrupted cache
+        }
+      }
+    },
+    []
+  );
+
+  /**
+   * Get current location
    */
   const getCurrentLocation = useCallback(() => {
     if (!geolocationSupported) {
-      setError('Geolocation not supported');
-      fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name);
+      fetchGasStationsData(
+        DEFAULT_LOCATION.lat,
+        DEFAULT_LOCATION.lng,
+        radius,
+        DEFAULT_LOCATION.name
+      );
       return;
     }
 
-    setLoading(true);
-    
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        fetchGasStationsData(latitude, longitude, radius, 'Your Current Location');
+        fetchGasStationsData(
+          position.coords.latitude,
+          position.coords.longitude,
+          radius,
+          "Your Current Location"
+        );
       },
-      (geoError) => {
-        console.warn('Geolocation error:', geoError);
-        // Fallback to default location
-        fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name);
+      () => {
+        fetchGasStationsData(
+          DEFAULT_LOCATION.lat,
+          DEFAULT_LOCATION.lng,
+          radius,
+          DEFAULT_LOCATION.name
+        );
       },
       GEOLOCATION_CONFIG
     );
   }, [fetchGasStationsData, radius, geolocationSupported]);
 
   /**
-   * Handle location search from child component
+   * Initialize app
    */
-  const handleLocationSearch = useCallback((location: UserLocation) => {
-    fetchGasStationsData(location.lat, location.lng, radius, location.name);
-  }, [fetchGasStationsData, radius]);
+useEffect(() => {
+  const savedSearch = localStorage.getItem("lastGasStationSearch");
 
-  /**
-   * Handle radius change
-   */
-  const handleRadiusChange = useCallback((newRadius: number) => {
-    setRadius(newRadius);
-    if (userLocation) {
-      fetchGasStationsData(userLocation.lat, userLocation.lng, newRadius, userLocation.name);
-    }
-  }, [fetchGasStationsData, userLocation]);
+  if (savedSearch && savedSearch !== "undefined") {
+    try {
+      const parsed: SearchState = JSON.parse(savedSearch);
 
-  /**
-   * Refresh current data
-   */
-  const refreshData = useCallback(() => {
-    if (userLocation) {
-      // Clear cache for this location before fetching
-      const cacheKey = `gas_stations_${userLocation.lat}_${userLocation.lng}_${radius}_${process.env.NEXT_PUBLIC_TANKERKOENIG_API_KEY || 'default'}`;
-      localStorage.removeItem(cacheKey);
-      
-      fetchGasStationsData(userLocation.lat, userLocation.lng, radius, userLocation.name);
-    }
-  }, [fetchGasStationsData, userLocation, radius]);
-
-  /**
-   * Initialize application
-   */
-  useEffect(() => {
-    const initializeApp = () => {
-      const savedSearch = localStorage.getItem('lastGasStationSearch');
-      
-      if (savedSearch) {
-        try {
-          const parsed: SearchState = JSON.parse(savedSearch);
-          const { lat, lng, name, radius: savedRadius } = parsed;
-          
-          if (savedRadius) setRadius(savedRadius);
-          fetchGasStationsData(lat, lng, savedRadius || radius, name);
-          return;
-        } catch (e) {
-          console.error('Error parsing saved search:', e);
-          localStorage.removeItem('lastGasStationSearch');
-        }
+      if (
+        typeof parsed.lat === "number" &&
+        typeof parsed.lng === "number" &&
+        typeof parsed.radius === "number" &&
+        typeof parsed.name === "string"
+      ) {
+        setRadius(parsed.radius);
+        fetchGasStationsData(
+          parsed.lat,
+          parsed.lng,
+          parsed.radius,
+          parsed.name
+        );
+        return; // ✅ stop here if restored
       }
-      
-      // Try to get current location or use default
-      getCurrentLocation();
-    };
+    } catch {
+      localStorage.removeItem("lastGasStationSearch");
+    }
+  }
 
-    initializeApp();
-  }, []);
+  // ✅ fallback ONLY if no valid saved state
+  getCurrentLocation();
+}, [fetchGasStationsData, getCurrentLocation]);
 
-  // Loading component
-  const renderLoading = () => (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <h2>Loading Gas Stations</h2>
-      <p>Fetching the latest fuel prices in your area...</p>
-      <p className="loading-details">
-        Searching within {radius}km of {userLocation.name}
-      </p>
-    </div>
-  );
 
-  // Error component
-  const renderError = () => (
-    <div className="error-container">
-      <div className="error-content">
+  // UI states
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <h2>Loading Gas Stations</h2>
+      </div>
+    );
+  }
+
+  if (error && !gasStationData) {
+    return (
+      <div className="error-container">
         <h2>Unable to Load Data</h2>
         <p>{error}</p>
-        <div className="error-actions">
-          <button 
-            className="retry-btn"
-            onClick={getCurrentLocation}
-          >
-            Try with Current Location
-          </button>
-          <button 
-            className="default-btn"
-            onClick={() => fetchGasStationsData(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, radius, DEFAULT_LOCATION.name)}
-          >
-            Use Berlin, Germany
-          </button>
-        </div>
       </div>
-    </div>
-  );
-
-  // Header controls component
-  const renderHeaderControls = () => (
-  <div className="app-header-controls">
-    <div className="header-left">
-      <h1 className="app-title">
-        <span className="fuel-icon">⛽</span>
-        FuelFinder
-        <span className="beta-badge">BETA</span>
-      </h1>
-    </div>
-    
-    <div className="header-right">
-      {userLocation && (
-        <div className="location-info">
-          <span className="location-name">{userLocation.name}</span>
-          <span className="location-coords">
-            ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
-          </span>
-        </div>
-      )}
-    </div>
-  </div>
-);
-
-
-
-
-  // Main render logic
-  if (loading) return renderLoading();
-  if (error && !gasStationData) return renderError();
+    );
+  }
 
   return (
     <div className="App">
-      {renderHeaderControls()}
-      
+      <div className="app-header-controls">
+        <h1 className="app-title">
+          <span className="fuel-icon">⛽</span>
+          FuelFinder <span className="beta-badge">BETA</span>
+        </h1>
+
+        <div className="location-info">
+          <span>{userLocation.name}</span>
+          <span>
+            ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
+          </span>
+        </div>
+      </div>
+
       {gasStationData && (
-        <GasStationsList 
-          data={gasStationData} 
+        <GasStationsList
+          data={gasStationData}
           initialUserLocation={userLocation}
-          onLocationSearch={handleLocationSearch}
           radius={radius}
-          onRadiusChange={handleRadiusChange}
+          onRadiusChange={(r) => {
+            if (r === radius) return;
+            setRadius(r);
+            fetchGasStationsData(
+              userLocation.lat,
+              userLocation.lng,
+              r,
+              userLocation.name
+            );
+          }}
         />
       )}
-
-     
     </div>
   );
 };
