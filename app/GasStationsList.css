@@ -2062,21 +2062,31 @@ body {
 .stations-grid-container {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   min-height: 0;
   background: var(--bg-secondary);
 }
 
+/* Compact 3-column grid */
 .stations-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.75rem;
-  padding: 0.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 0.25rem 0;
 }
 
 .station-grid-item {
   min-height: 0;
   transition: transform var(--transition-normal);
+  height: fit-content;
+}
+
+/* Compact card styling */
+.station-card {
+  padding: 1rem;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
 }
 
 .station-grid-item:hover {
