@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-
+import { usePersistentState } from './usePersistentState';
 export const useDarkMode = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+ const [isDarkMode, setIsDarkMode] = usePersistentState<boolean>(
+  "fuelFinder_darkMode",
+  false
+);
 
   useEffect(() => {
     // Check for saved dark mode preference
