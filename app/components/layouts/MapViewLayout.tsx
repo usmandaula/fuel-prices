@@ -143,14 +143,14 @@ const MapViewLayout: React.FC<MapViewLayoutProps> = ({
             <div className="zoom-level">Zoom: {mapZoom}x</div>
           </div>
 
-          {selectedStation && (
+          {/* {selectedStation && (
             <SelectedStationOverlay
               station={selectedStation}
               priceFilter={priceFilter}
               onClose={() => setSelectedStation(null)}
               onGetDirections={() => getDirections(selectedStation)}
             />
-          )}
+          )} */}
         </div>
 
         <MapLegend />
