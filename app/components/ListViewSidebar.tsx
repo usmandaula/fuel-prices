@@ -35,6 +35,7 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
 }) => {
   return (
     <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-scroll-container">
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           {onToggleSidebar && (
@@ -128,6 +129,7 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
           selectedFuelType={selectedFuelType}
           isMapView={viewMode === 'map'}
         />
+      </div>
       </div>
     </aside>
   );

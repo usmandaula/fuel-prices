@@ -31,6 +31,8 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
 }) => {
   return (
     <aside className={`app-sidebar map-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-scroll-container">
+      
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           {onToggleSidebar && (
@@ -114,6 +116,7 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
           selectedFuelType={selectedFuelType}
           isMapView={viewMode === 'map'}
         />
+      </div>
       </div>
     </aside>
   );
