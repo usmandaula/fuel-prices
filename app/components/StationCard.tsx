@@ -125,7 +125,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.diesel)}</div>
+            <div className="price-value">{formatPrice(station.diesel)}</div>
             {selectedFuelType === 'diesel' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -140,7 +140,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.e5)}</div>
+            <div className="price-value">{formatPrice(station.e5)}</div>
             {selectedFuelType === 'e5' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -155,7 +155,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.e10)}</div>
+            <div className="price-value">{formatPrice(station.e10)}</div>
             {selectedFuelType === 'e10' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
