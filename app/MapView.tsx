@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { FaLocationArrow, FaSearchLocation } from 'react-icons/fa';
+import { FaGasPump, FaMapMarkerAlt } from 'react-icons/fa';
 
-// Fix for default marker icons in Leaflet
+// Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -35,80 +35,27 @@ interface MapViewProps {
   selectedStation?: GasStation | null;
   userLocation?: { lat: number; lng: number; name?: string };
   onStationSelect: (station: GasStation) => void;
-  onCenterUserLocation?: () => void;
   searchedLocation?: { lat: number; lng: number; name: string } | null;
 }
 
-// Component to handle recentering map
-const RecenterControl: React.FC<{ 
-  userLocation?: { lat: number; lng: number; name?: string };
-  searchedLocation?: { lat: number; lng: number; name: string } | null;
-}> = ({ userLocation, searchedLocation }) => {
+// Recenter control
+const RecenterControl: React.FC<{ userLocation?: { lat: number; lng: number; name?: string } }> = ({ userLocation }) => {
   const map = useMap();
   
   useEffect(() => {
     if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], 14);
+      map.setView([userLocation.lat, userLocation.lng], 13);
     }
-  }, [userLocation, map, searchedLocation]);
+  }, [userLocation, map]);
 
   return null;
 };
 
-// Component for custom location button
-const LocationButton: React.FC<{ 
-  userLocation?: { lat: number; lng: number; name?: string }; 
-  onCenterUserLocation?: () => void;
-  isCurrentLocation: boolean;
-}> = ({ userLocation, onCenterUserLocation, isCurrentLocation }) => {
-  const map = useMap();
-  
-  const handleClick = () => {
-    if (userLocation) {
-      map.setView([userLocation.lat, userLocation.lng], 14);
-    }
-    if (onCenterUserLocation) {
-      onCenterUserLocation();
-    }
-  };
-
-  const Icon = isCurrentLocation ? FaLocationArrow : FaSearchLocation;
-  const title = isCurrentLocation ? "Center on my location" : "Center on search location";
-
-  return (
-    <div className="leaflet-top leaflet-right">
-      <div className="leaflet-control leaflet-bar">
-        <a 
-          href="#" 
-          title={title}
-          onClick={(e) => {
-            e.preventDefault();
-            handleClick();
-          }}
-          className="custom-control-button"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '44px',
-            height: '44px',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
-          }}
-        >
-          <Icon style={{ color: isCurrentLocation ? '#007bff' : '#28a745', fontSize: '20px' }} />
-        </a>
-      </div>
-    </div>
-  );
-};
-
-// Custom marker icons
+// Custom markers
 const createMarkerIcon = (isOpen: boolean, isSelected: boolean = false) => {
-  const color = isOpen ? '#28a745' : '#dc3545';
-  const selectedColor = '#007bff';
-  const size = isSelected ? 40 : 32;
+  const color = isOpen ? '#10b981' : '#ef4444';
+  const selectedColor = '#3b82f6';
+  const size = isSelected ? 32 : 24;
   
   return L.divIcon({
     className: 'custom-marker',
@@ -117,51 +64,47 @@ const createMarkerIcon = (isOpen: boolean, isSelected: boolean = false) => {
         width: ${size}px;
         height: ${size}px;
         background-color: ${isSelected ? selectedColor : color};
-        border: 3px solid white;
+        border: 2px solid white;
         border-radius: 50%;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
-        font-size: ${isSelected ? '18px' : '16px'};
-        transition: all 0.2s ease;
+        font-size: 12px;
       ">
         ⛽
       </div>
     `,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2]
+    iconAnchor: [size / 2, size / 2]
   });
 };
 
 const createUserLocationIcon = (isCurrent: boolean = true) => {
-  const color = isCurrent ? '#007bff' : '#28a745';
-  const icon = isCurrent ? '📍' : '🔍';
+  const color = isCurrent ? '#3b82f6' : '#10b981';
   
   return L.divIcon({
     className: 'user-location-marker',
     html: `
       <div style="
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         background-color: ${color};
-        border: 3px solid white;
+        border: 2px solid white;
         border-radius: 50%;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 20px;
-        animation: pulse 2s infinite;
+        font-size: 14px;
       ">
-        ${icon}
+        ${isCurrent ? '📍' : '🔍'}
       </div>
     `,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20]
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
   });
 };
 
@@ -170,79 +113,51 @@ const MapView: React.FC<MapViewProps> = ({
   selectedStation, 
   userLocation,
   onStationSelect,
-  onCenterUserLocation,
   searchedLocation
 }) => {
   const mapRef = useRef<L.Map>(null);
+  const isCurrentLocation = !searchedLocation || searchedLocation.name === 'Current Location';
   
-  // Default center (Berlin)
-  const defaultCenter: [number, number] = [52.52, 13.405];
-  
-  // Calculate center based on user location or stations
-  const calculateCenter = (): [number, number] => {
+  // Calculate center
+  const getCenter = (): [number, number] => {
     if (userLocation) {
       return [userLocation.lat, userLocation.lng];
     }
-    
-    if (stations.length === 0) return defaultCenter;
-    
-    const avgLat = stations.reduce((sum, s) => sum + s.lat, 0) / stations.length;
-    const avgLng = stations.reduce((sum, s) => sum + s.lng, 0) / stations.length;
-    return [avgLat, avgLng];
-  };
-
-  const center = calculateCenter();
-  const isCurrentLocation = !searchedLocation || searchedLocation.name === 'Current Location';
-
-  // Calculate zoom level
-  const getZoomLevel = () => {
-    if (userLocation && stations.length > 0) {
-      return 13;
-    }
-    if (stations.length > 0) {
-      return 12;
-    }
-    return 10;
+    return stations.length > 0 
+      ? [stations[0].lat, stations[0].lng]
+      : [52.52, 13.405]; // Berlin
   };
 
   return (
-    <div className="map-container">
+    <div className="map-compact">
       <MapContainer 
-        center={center} 
-        zoom={getZoomLevel()} 
-        style={{ height: '500px', width: '100%', borderRadius: '12px' }}
+        center={getCenter()} 
+        zoom={13} 
+        style={{ height: '400px', width: '100%' }}
         ref={mapRef}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <RecenterControl userLocation={userLocation} searchedLocation={searchedLocation} />
-        <LocationButton 
-          userLocation={userLocation} 
-          onCenterUserLocation={onCenterUserLocation}
-          isCurrentLocation={isCurrentLocation}
-        />
+        <RecenterControl userLocation={userLocation} />
         
-        {/* User location marker (current or searched) */}
+        {/* User location */}
         {userLocation && (
           <Marker 
             position={[userLocation.lat, userLocation.lng]} 
             icon={createUserLocationIcon(isCurrentLocation)}
           >
             <Popup>
-              <div className="map-popup">
-                <h4>{isCurrentLocation ? '📍 Your Location' : '🔍 Search Location'}</h4>
-                <p><strong>{userLocation.name}</strong></p>
-                <p><strong>Coordinates:</strong></p>
-                <p>{userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}</p>
+              <div className="popup-compact">
+                <strong>{userLocation.name}</strong>
               </div>
             </Popup>
           </Marker>
         )}
         
-        {/* Station markers */}
+        {/* Stations */}
         {stations.map(station => (
           <Marker
             key={station.id}
@@ -251,52 +166,31 @@ const MapView: React.FC<MapViewProps> = ({
             eventHandlers={{
               click: () => {
                 onStationSelect(station);
-                // Optional: recenter map on selected station
                 if (mapRef.current) {
-                  mapRef.current.setView([station.lat, station.lng], 16);
+                  mapRef.current.setView([station.lat, station.lng], 15);
                 }
               },
             }}
           >
             <Popup>
-              <div className="map-popup">
-                <h4>⛽ {station.name}</h4>
-                <p><strong>Brand:</strong> {station.brand}</p>
-                <p><strong>Status:</strong> <span className={station.isOpen ? 'status-open' : 'status-closed'}>
-                  {station.isOpen ? 'Open' : 'Closed'}
-                </span></p>
-                <p><strong>Diesel:</strong> €{station.diesel.toFixed(3)}</p>
-                <p><strong>E5:</strong> €{station.e5.toFixed(3)}</p>
-                <p><strong>E10:</strong> €{station.e10.toFixed(3)}</p>
-                <p><strong>Distance:</strong> {station.dist.toFixed(1)} km</p>
-                {userLocation && (
-                  <a 
-                    href={`https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${station.lat},${station.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="directions-link"
-                  >
-                    Get Directions
-                  </a>
-                )}
+              <div className="popup-compact">
+                <div className="popup-header">
+                  <FaGasPump className="icon-sm" />
+                  <strong>{station.name}</strong>
+                </div>
+                <div className="popup-content">
+                  <div><strong>{station.brand}</strong></div>
+                  <div>{station.dist.toFixed(1)} km away</div>
+                  <div className="popup-prices">
+                    <div>D: €{station.diesel.toFixed(3)}</div>
+                    <div>E5: €{station.e5.toFixed(3)}</div>
+                    <div>E10: €{station.e10.toFixed(3)}</div>
+                  </div>
+                </div>
               </div>
             </Popup>
           </Marker>
         ))}
-        
-        {/* Draw line to selected station if user location is available */}
-        {userLocation && selectedStation && (
-          <Polyline
-            positions={[
-              [userLocation.lat, userLocation.lng],
-              [selectedStation.lat, selectedStation.lng]
-            ]}
-            color={isCurrentLocation ? "#007bff" : "#28a745"}
-            weight={3}
-            opacity={0.7}
-            dashArray="10, 10"
-          />
-        )}
       </MapContainer>
     </div>
   );
