@@ -14,6 +14,27 @@ const RadiusSelector: React.FC<RadiusSelectorProps> = ({
   options = [1, 3, 5, 10, 15, 25],
   className = ''
 }) => {
+  console.log('🎯 RadiusSelector rendered, radius:', radius);
+
+  const handleClick = (r: number, event: React.MouseEvent) => {
+    console.log('🎯 CLICK REGISTERED:', {
+      clickedRadius: r,
+      currentRadius: radius,
+      eventType: event.type,
+      timestamp: Date.now()
+    });
+    
+    event.preventDefault(); // Prevent any default behavior
+    event.stopPropagation(); // Stop bubbling
+    
+    if (onRadiusChange) {
+      console.log('🎯 Calling onRadiusChange with:', r);
+      onRadiusChange(r);
+    } else {
+      console.error('❌ onRadiusChange is undefined!');
+    }
+  };
+
   return (
     <div className={`radius-selector ${className}`}>
       <div className="radius-header">
@@ -27,7 +48,7 @@ const RadiusSelector: React.FC<RadiusSelectorProps> = ({
           <button
             key={r}
             className={`radius-btn ${radius === r ? 'active' : ''}`}
-            onClick={() => onRadiusChange && onRadiusChange(r)}
+            onClick={(e) => handleClick(r, e)}
             title={`Search within ${r} kilometers`}
           >
             {r}

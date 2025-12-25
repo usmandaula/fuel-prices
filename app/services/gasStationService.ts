@@ -303,8 +303,11 @@ export const fetchGasStationsCached = async (
   lat: number = DEFAULT_LAT,
   lng: number = DEFAULT_LNG,
   radius: number = DEFAULT_RADIUS,
+  
   options: FetchOptions & { cacheDuration?: number } = {}
 ): Promise<GasStationData> => {
+    console.log('fetchGasStationsCached called with:', { lat, lng, radius });
+  
   const { cacheDuration = MAX_CACHE_AGE, ...fetchOptions } = options;
   
   const cacheKey = createCacheKey(lat, lng, radius, fetchOptions);

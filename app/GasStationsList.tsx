@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback,useEffect } from 'react';
 import { FaInfoCircle } from 'react-icons/fa';
 import { GasStationsListProps } from './types/gasStationTypes';
 import Navbar from './components/layouts/Navbar';
@@ -20,10 +19,14 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
   onRadiusChange 
 }) => {
   // STATE DECLARATIONS
-  const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
-    'fuelFinder_viewMode', 
-    'map'
-  );
+
+ const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+
+  // const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
+  //   'fuelFinder_viewMode', 
+  //   'map',
+   
+  // );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   
@@ -67,7 +70,10 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
   const toggleSidebar = useCallback(() => {
     setIsSidebarCollapsed(prev => !prev);
   }, []);
-
+useEffect(() => {
+  // Force a DOM update when viewMode changes
+  console.log('🔄 ViewMode changed to:', viewMode);
+}, [viewMode]);
   // Data validation - moved before hooks to prevent conditional hook calls
   if (!data || data.status !== 'ok' || !Array.isArray(data.stations)) {
     return (
@@ -103,8 +109,16 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
     toggleSidebar,
     isDarkMode,
     radius,
-    onRadiusChange
+     onRadiusChange: (newRadius: number) => {
+    console.log('📏 GasStationsList: onRadiusChange called', newRadius);
+    if (onRadiusChange) {
+      onRadiusChange(newRadius);
+    } else {
+      console.error('❌ onRadiusChange prop is undefined!');
+    }
+  }
   };
+  
 
   return (
     <div className={`gas-stations-app-enhanced ${isDarkMode ? 'dark' : ''}`}>
