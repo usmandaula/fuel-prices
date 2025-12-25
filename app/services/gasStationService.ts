@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import { GasStationData, GasStation } from '../types/gasStationTypes';
 
 // API Configuration
@@ -39,7 +39,20 @@ interface FetchOptions {
   sort?: 'dist' | 'price';
   fuelType?: 'all' | 'e5' | 'e10' | 'diesel';
   includeClosed?: boolean;
+  signal?: AbortSignal;
 }
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiry: number;
+}
+
+// Constants
+const CACHE_PREFIX = 'fuel_finder_cache_';
+const MAX_CACHE_AGE = 5 * 60 * 1000; // 5 minutes
+const MAX_RETRIES = 3;
+const REQUEST_TIMEOUT = 10000;
 
 // Common headers
 const DEFAULT_HEADERS = {
@@ -48,23 +61,39 @@ const DEFAULT_HEADERS = {
   'User-Agent': 'FuelFinder-App/1.0'
 };
 
-// Create axios instance with default config
+// Create axios instance with interceptors
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: REQUEST_TIMEOUT,
   headers: DEFAULT_HEADERS
+});
+
+// Request interceptor for adding API key
+apiClient.interceptors.request.use((config) => {
+  if (!config.params) config.params = {};
+  
+  // Add API key if not present
+  if (!config.params.apikey) {
+    config.params.apikey = DEFAULT_API_KEY;
+  }
+  
+  return config;
 });
 
 /**
  * Validates API parameters
  */
 const validateParams = (apiKey: string, radius: number): void => {
-  if (!apiKey) {
-    throw new Error('API key is required');
+  if (!apiKey || apiKey === '00000000-0000-0000-0000-000000000002') {
+    throw new Error('Valid API key is required. Please provide a TankerKönig API key.');
   }
   
   if (radius > 25) {
-    throw new Error('Radius cannot exceed 25 km');
+    throw new Error('Radius cannot exceed 25 km (API limitation)');
+  }
+  
+  if (radius <= 0) {
+    throw new Error('Radius must be greater than 0');
   }
 };
 
@@ -86,7 +115,8 @@ const transformResponse = (
     license: response.license,
     data: response.data,
     status: response.status,
-    stations
+    stations,
+    timestamp: Date.now()
   };
 };
 
@@ -95,18 +125,34 @@ const transformResponse = (
  */
 const handleApiError = (error: unknown): never => {
   if (axios.isAxiosError(error)) {
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout. Please check your connection.');
+    const axiosError = error as AxiosError;
+    
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      throw new Error('Request timeout. Please check your internet connection.');
     }
     
-    if (error.response) {
-      const status = error.response.status;
-      const message = error.response.data?.message || 'Unknown error';
-      throw new Error(`API Error ${status}: ${message}`);
+    if (axiosError.response) {
+      const status = axiosError.response.status;
+      const message = (axiosError.response.data as any)?.message || axiosError.response.statusText;
+      
+      switch (status) {
+        case 400:
+          throw new Error('Invalid request parameters. Please check your input.');
+        case 401:
+          throw new Error('Invalid API key. Please provide a valid TankerKönig API key.');
+        case 403:
+          throw new Error('Access forbidden. Please check your API key permissions.');
+        case 429:
+          throw new Error('Too many requests. Please wait before trying again.');
+        case 500:
+          throw new Error('Server error. Please try again later.');
+        default:
+          throw new Error(`API Error ${status}: ${message}`);
+      }
     }
     
-    if (error.request) {
-      throw new Error('No response from server. Please check your connection.');
+    if (axiosError.request) {
+      throw new Error('No response from server. Please check your internet connection.');
     }
   }
   
@@ -116,6 +162,87 @@ const handleApiError = (error: unknown): never => {
   
   throw new Error('Failed to fetch gas stations. Please try again.');
 };
+
+/**
+ * Creates a secure cache key from parameters
+ */
+const createCacheKey = (lat: number, lng: number, radius: number, options: FetchOptions): string => {
+  const { sort = 'dist', fuelType = 'all', includeClosed = false } = options;
+  
+  // Use hash instead of API key for security
+  const paramsString = `${lat}:${lng}:${radius}:${sort}:${fuelType}:${includeClosed}`;
+  const paramsHash = btoa(paramsString)
+    .replace(/=/g, '')
+    .substring(0, 32);
+  
+  return `${CACHE_PREFIX}${paramsHash}`;
+};
+
+/**
+ * Manages localStorage cache
+ */
+class CacheManager {
+  static set<T>(key: string, data: T, duration: number = MAX_CACHE_AGE): void {
+    try {
+      const entry: CacheEntry<T> = {
+        data,
+        timestamp: Date.now(),
+        expiry: Date.now() + duration
+      };
+      
+      localStorage.setItem(key, JSON.stringify(entry));
+    } catch (error) {
+      console.warn('Failed to write to cache:', error);
+      // localStorage might be full or disabled
+    }
+  }
+  
+  static get<T>(key: string): T | null {
+    try {
+      const cached = localStorage.getItem(key);
+      if (!cached) return null;
+      
+      const entry: CacheEntry<T> = JSON.parse(cached);
+      
+      // Check if cache is still valid
+      if (Date.now() > entry.expiry) {
+        this.remove(key);
+        return null;
+      }
+      
+      return entry.data;
+    } catch (error) {
+      console.warn('Failed to read from cache:', error);
+      this.remove(key);
+      return null;
+    }
+  }
+  
+  static remove(key: string): void {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn('Failed to remove from cache:', error);
+    }
+  }
+  
+  static cleanup(): void {
+    try {
+      const keysToRemove: string[] = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(CACHE_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => this.remove(key));
+    } catch (error) {
+      console.warn('Failed to cleanup cache:', error);
+    }
+  }
+}
 
 /**
  * Fetches gas stations from Tankerkönig API
@@ -131,16 +258,17 @@ export const fetchGasStations = async (
       apiKey = DEFAULT_API_KEY,
       sort = 'dist',
       fuelType = 'all',
-      includeClosed = false
+      includeClosed = false,
+      signal
     } = options;
 
     // Validate parameters
     validateParams(apiKey, radius);
 
     // Build URL params
-    const params = {
-      lat: lat.toString(),
-      lng: lng.toString(),
+    const params: Record<string, string> = {
+      lat: lat.toFixed(6),
+      lng: lng.toFixed(6),
       rad: radius.toString(),
       sort,
       type: fuelType,
@@ -148,7 +276,12 @@ export const fetchGasStations = async (
     };
 
     // Make API request
-    const { data } = await apiClient.get<TankerKoenigResponse>('/list.php', { params });
+    const response = await apiClient.get<TankerKoenigResponse>('/list.php', { 
+      params,
+      signal 
+    });
+    
+    const data = response.data;
     
     // Check if response is OK
     if (!data.ok) {
@@ -164,56 +297,42 @@ export const fetchGasStations = async (
 };
 
 /**
- * Creates a cache key from parameters
- */
-const createCacheKey = (lat: number, lng: number, radius: number, apiKey: string): string => {
-  return `gas_stations_${lat}_${lng}_${radius}_${apiKey}`;
-};
-
-/**
- * Cached version of fetchGasStations with localStorage support
+ * Cached version of fetchGasStations
  */
 export const fetchGasStationsCached = async (
   lat: number = DEFAULT_LAT,
   lng: number = DEFAULT_LNG,
   radius: number = DEFAULT_RADIUS,
+  
   options: FetchOptions & { cacheDuration?: number } = {}
 ): Promise<GasStationData> => {
-  const { cacheDuration = 5 * 60 * 1000, ...fetchOptions } = options; // Default 5 minutes
-  const apiKey = fetchOptions.apiKey || DEFAULT_API_KEY;
+    console.log('fetchGasStationsCached called with:', { lat, lng, radius });
   
-  const cacheKey = createCacheKey(lat, lng, radius, apiKey);
+  const { cacheDuration = MAX_CACHE_AGE, ...fetchOptions } = options;
+  
+  const cacheKey = createCacheKey(lat, lng, radius, fetchOptions);
+  
+  // Check cache first
+  const cachedData = CacheManager.get<GasStationData>(cacheKey);
+  if (cachedData) {
+    console.log('Returning cached gas station data');
+    return cachedData;
+  }
   
   try {
-    // Check cache
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      
-      // Use cache if valid
-      if (Date.now() - timestamp < cacheDuration) {
-        console.log('Returning cached gas station data');
-        return data;
-      }
-    }
-    
     // Fetch fresh data
     const freshData = await fetchGasStations(lat, lng, radius, fetchOptions);
     
     // Update cache
-    localStorage.setItem(cacheKey, JSON.stringify({
-      data: freshData,
-      timestamp: Date.now()
-    }));
+    CacheManager.set(cacheKey, freshData, cacheDuration);
     
     return freshData;
   } catch (error) {
-    // Fallback to expired cache on error
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const { data } = JSON.parse(cached);
+    // Fallback to cache even if expired
+    const cachedData = CacheManager.get<GasStationData>(cacheKey);
+    if (cachedData) {
       console.warn('Using expired cache due to fetch error');
-      return data;
+      return cachedData;
     }
     
     throw error instanceof Error ? error : new Error('Failed to fetch gas stations');
@@ -227,22 +346,37 @@ export const fetchGasStationsWithRetry = async (
   lat: number = DEFAULT_LAT,
   lng: number = DEFAULT_LNG,
   radius: number = DEFAULT_RADIUS,
-  options: FetchOptions & { maxRetries?: number; retryDelay?: number } = {}
+  options: FetchOptions & { 
+    maxRetries?: number; 
+    retryDelay?: number;
+  } = {}
 ): Promise<GasStationData> => {
-  const { maxRetries = 3, retryDelay = 1000, ...fetchOptions } = options;
+  const { 
+    maxRetries = MAX_RETRIES, 
+    retryDelay = 1000, 
+    ...fetchOptions 
+  } = options;
+  
   let lastError: Error | null = null;
+  const abortController = new AbortController();
+  const signal = abortController.signal;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await fetchGasStations(lat, lng, radius, fetchOptions);
+      return await fetchGasStations(lat, lng, radius, {
+        ...fetchOptions,
+        signal
+      });
     } catch (error) {
       lastError = error as Error;
       
       // Don't retry on client errors
       if (error instanceof Error && (
         error.message.includes('API key') ||
-        error.message.includes('Radius cannot exceed')
+        error.message.includes('Radius cannot exceed') ||
+        error.message.includes('Invalid request')
       )) {
+        abortController.abort();
         break;
       }
 
@@ -255,6 +389,7 @@ export const fetchGasStationsWithRetry = async (
     }
   }
 
+  abortController.abort();
   throw lastError || new Error('Failed to fetch gas stations after retries');
 };
 
@@ -268,7 +403,11 @@ export const fetchNearbyGasStations = async (
     timeout?: number;
   } = {}
 ): Promise<GasStationData> => {
-  const { enableHighAccuracy = true, timeout = 10000, ...fetchOptions } = options;
+  const { 
+    enableHighAccuracy = true, 
+    timeout = REQUEST_TIMEOUT, 
+    ...fetchOptions 
+  } = options;
 
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -279,7 +418,12 @@ export const fetchNearbyGasStations = async (
     const handleSuccess = async (position: GeolocationPosition) => {
       try {
         const { latitude, longitude } = position.coords;
-        const data = await fetchGasStations(latitude, longitude, radius, fetchOptions);
+        const data = await fetchGasStationsWithRetry(
+          latitude, 
+          longitude, 
+          radius, 
+          fetchOptions
+        );
         resolve(data);
       } catch (error) {
         reject(error);
@@ -288,18 +432,22 @@ export const fetchNearbyGasStations = async (
 
     const handleError = (error: GeolocationPositionError) => {
       const messages: Record<number, string> = {
-        1: 'Permission denied. Please allow location access.',
-        2: 'Location information is unavailable.',
-        3: 'Location request timed out.'
+        1: 'Permission denied. Please allow location access in your browser settings.',
+        2: 'Location information is unavailable. Please check your device location services.',
+        3: 'Location request timed out. Please try again.'
       };
       
-      reject(new Error(`Failed to get location: ${messages[error.code] || 'Unknown error'}`));
+      reject(new Error(messages[error.code] || 'Failed to get your location'));
     };
 
     navigator.geolocation.getCurrentPosition(
       handleSuccess,
       handleError,
-      { enableHighAccuracy, timeout, maximumAge: 0 }
+      { 
+        enableHighAccuracy, 
+        timeout, 
+        maximumAge: 60000 // 1 minute maximum age
+      }
     );
   });
 };
@@ -312,10 +460,16 @@ export const fetchStationDetails = async (
   apiKey: string = DEFAULT_API_KEY
 ): Promise<GasStation> => {
   try {
-    const { data } = await apiClient.get<{ ok: boolean; status: string; station: GasStation }>('/detail.php', {
-      params: { id: stationId, apikey: apiKey },
-      timeout: 5000
+    validateParams(apiKey, 1); // Validate API key
+    
+    const response = await apiClient.get<{ ok: boolean; status: string; station: GasStation }>('/detail.php', {
+      params: { 
+        id: stationId, 
+        apikey: apiKey 
+      }
     });
+
+    const data = response.data;
 
     if (!data.ok) {
       throw new Error(`Failed to fetch station details: ${data.status}`);
@@ -335,14 +489,20 @@ export const fetchPrices = async (
   apiKey: string = DEFAULT_API_KEY
 ): Promise<Record<string, { diesel: number; e5: number; e10: number }>> => {
   try {
-    const { data } = await apiClient.get<{ 
+    validateParams(apiKey, 1); // Validate API key
+    
+    const response = await apiClient.get<{ 
       ok: boolean; 
       status: string; 
       prices: Record<string, { diesel: number; e5: number; e10: number }> 
     }>('/prices.php', {
-      params: { ids: stationIds.join(','), apikey: apiKey },
-      timeout: 5000
+      params: { 
+        ids: stationIds.join(','), 
+        apikey: apiKey 
+      }
     });
+
+    const data = response.data;
 
     if (!data.ok) {
       throw new Error(`Failed to fetch prices: ${data.status}`);
@@ -354,12 +514,24 @@ export const fetchPrices = async (
   }
 };
 
+/**
+ * Performs periodic cache cleanup
+ */
+export const initCacheCleanup = (intervalMs: number = 3600000): NodeJS.Timeout => {
+  return setInterval(() => {
+    CacheManager.cleanup();
+  }, intervalMs);
+};
+
 // Export configuration
 export const API_CONFIG = {
   DEFAULT_LAT,
   DEFAULT_LNG,
   DEFAULT_RADIUS,
-  DEFAULT_API_KEY
+  DEFAULT_API_KEY,
+  MAX_CACHE_AGE,
+  MAX_RETRIES,
+  REQUEST_TIMEOUT
 };
 
 // Export all functions
@@ -370,5 +542,6 @@ export default {
   fetchGasStationsWithRetry,
   fetchGasStationsCached,
   fetchNearbyGasStations,
+  initCacheCleanup,
   API_CONFIG
 };

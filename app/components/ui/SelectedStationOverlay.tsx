@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaTimes, FaRoute } from 'react-icons/fa';
-import { GasStation } from '../types/gasStationTypes';
+import { GasStation } from '../../types/gasStationTypes';
 import PriceDisplay from './PriceDisplay';
 
 interface SelectedStationOverlayProps {
@@ -21,11 +21,12 @@ const SelectedStationOverlay: React.FC<SelectedStationOverlayProps> = ({
       <div className="overlay-header">
         <h3>{station.name}</h3>
         <button 
-          className="close-overlay"
-          onClick={onClose}
-        >
-          <FaTimes />
-        </button>
+  className="close-overlay"
+  onClick={onClose}
+  aria-label="Close station details"
+>
+  <FaTimes />
+</button>
       </div>
       <div className="overlay-content">
         <div className="overlay-prices">

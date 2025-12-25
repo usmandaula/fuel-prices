@@ -35,12 +35,17 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
 }) => {
   return (
     <aside className={`app-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-scroll-container">
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           {onToggleSidebar && (
-            <button className="sidebar-toggle-btn" onClick={onToggleSidebar}>
-              {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-            </button>
+             <button 
+    className="sidebar-toggle-btn" 
+    onClick={onToggleSidebar}
+    aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+  >
+    {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+  </button>
           )}
           <h2>Filters & Sorting</h2>
         </div>
@@ -124,6 +129,7 @@ const ListViewSidebar: React.FC<ListViewSidebarProps> = ({
           selectedFuelType={selectedFuelType}
           isMapView={viewMode === 'map'}
         />
+      </div>
       </div>
     </aside>
   );

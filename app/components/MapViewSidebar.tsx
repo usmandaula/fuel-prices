@@ -2,6 +2,7 @@ import React from 'react';
 import { FaFilter, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
 import { MapViewSidebarProps } from '../types/gasStationTypes';
 import ClickableStats from './ClickableStats';
+import RadiusSelector from './ui/RadiusSelector';
 
 // Define radius options (same as in main app)
 const RADIUS_OPTIONS = [1, 3, 5, 10, 15, 25] as const;
@@ -30,12 +31,18 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
 }) => {
   return (
     <aside className={`app-sidebar map-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-scroll-container">
+      
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           {onToggleSidebar && (
-            <button className="sidebar-toggle-btn" onClick={onToggleSidebar}>
-              {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-            </button>
+            <button 
+    className="sidebar-toggle-btn" 
+    onClick={onToggleSidebar}
+    aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+  >
+    {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
+  </button>
           )}
           <h2>Map View</h2>
         </div>
@@ -61,7 +68,8 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
             </button>
           </div>
         </div>
-<div className="radius-selector-sidebar">
+        <RadiusSelector radius={radius} onRadiusChange={onRadiusChange} />
+{/* <div className="radius-selector-sidebar">
         <label className="filter-label">Search Radius:</label>
         <div className="radius-buttons-sidebar">
           {RADIUS_OPTIONS.map((r) => (
@@ -81,7 +89,7 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
               <b>{radius}km</b></span>
           </div>
         )}
-      </div>
+      </div> */}
         {/* <div className="filter-group">
           <label className="filter-label">Fuel Price Focus:</label>
           <div className="price-buttons-simple">
@@ -108,6 +116,7 @@ const MapViewSidebar: React.FC<MapViewSidebarProps> = ({
           selectedFuelType={selectedFuelType}
           isMapView={viewMode === 'map'}
         />
+      </div>
       </div>
     </aside>
   );

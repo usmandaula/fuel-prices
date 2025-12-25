@@ -16,29 +16,33 @@ export const handleGasStationAPIError = (error: unknown): GasStationAPIError => 
   }
 
   if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase();
+    
     // Check for specific error messages
-    if (error.message.includes('API key')) {
+    if (errorMessage.includes('api key')) {
       return new GasStationAPIError(
         'Invalid API key. Please check your configuration.',
         'INVALID_API_KEY'
       );
     }
     
-    if (error.message.includes('Radius cannot exceed')) {
+    if (errorMessage.includes('radius cannot exceed')) {
       return new GasStationAPIError(
         'Search radius is too large. Maximum is 25 km.',
         'RADIUS_TOO_LARGE'
       );
     }
     
-    if (error.message.includes('timeout')) {
+    if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
       return new GasStationAPIError(
         'Request timed out. Please check your internet connection.',
         'TIMEOUT'
       );
     }
     
-    if (error.message.includes('ECONNREFUSED')) {
+    if (errorMessage.includes('econnrefused') || 
+        errorMessage.includes('network error') ||
+        errorMessage.includes('failed to fetch')) {
       return new GasStationAPIError(
         'Unable to connect to the server. Please try again later.',
         'CONNECTION_ERROR'
