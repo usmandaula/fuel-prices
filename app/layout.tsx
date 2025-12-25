@@ -19,20 +19,31 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en"   suppressHydrationWarning
-  className={
-    typeof window !== "undefined" &&
-    localStorage.getItem("fuelFinder_darkMode") === "true"
-      ? "dark"
-      : ""
-  }>
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* 👇 Runs BEFORE React hydrates */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function () {
+  try {
+    const isDark = localStorage.getItem('fuelFinder_darkMode') === 'true';
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch (e) {}
+})();
+`,
+          }}
+        />
+
         {children}
       </body>
     </html>
