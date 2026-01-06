@@ -152,6 +152,7 @@ useEffect(() => {
             isLocating={isLocating}
             getUserLocation={getUserLocation}
             scrollToStation={scrollToStation}
+             userLocation={userLocation}
           />
         )}
       </main>

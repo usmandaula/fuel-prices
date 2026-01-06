@@ -41,6 +41,7 @@ interface ListViewLayoutProps {
   scrollToStation: (stationId: string) => void;
   radius: number;
   onRadiusChange: (radius: number) => void;
+  userLocation?: { lat: number; lng: number; name?: string };
 }
 
 const ListViewLayout: React.FC<ListViewLayoutProps> = ({
@@ -66,7 +67,8 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
   getUserLocation,
   scrollToStation,
   radius,
-  onRadiusChange
+  onRadiusChange,
+  userLocation
 }) => {
   return (
     <>
@@ -152,6 +154,7 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
                       isOverallBestPrice={station.isOverallBestPrice || false}
                       selectedFuelType={priceFilter}
                       scrollToStation={scrollToStation}
+                      userLocation={userLocation}
                     />
                   </div>
                 ))}

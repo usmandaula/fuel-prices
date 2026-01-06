@@ -117,6 +117,7 @@ export interface StationCardProps {
   station: GasStation;
   isSelected: boolean;
   onSelect: (station: GasStation) => void;
+  userLocation?: { lat: number; lng: number; name?: string };
   sortBy: SortOption;
   isBestForSelectedFuel?: boolean;
   isOverallBestPrice?: boolean;
