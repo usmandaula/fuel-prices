@@ -213,11 +213,11 @@ const StationCard: React.FC<StationCardProps> = ({
           <div className="amenities">
             <div className="amenities-label">Facilities:</div>
             <div className="amenities-list">
-              {station.amenities.slice(0, 3).map((amenity, index) => (
+              {station.amenities.slice(1, 4).map((amenity, index) => (
                 <span key={index} className="amenity-tag">{amenity}</span>
               ))}
-              {station.amenities.length > 3 && (
-                <span className="amenity-more">+{station.amenities.length - 3}</span>
+              {station.amenities.length > 4 && (
+                <span className="amenity-more">+{station.amenities.length - 4 }</span>
               )}
             </div>
             <div className="amenities-icons">
@@ -237,10 +237,7 @@ const StationCard: React.FC<StationCardProps> = ({
             Directions
             
           </button>
-          <button className="action-btn details">
-            <FaChevronRight />
-            Details
-          </button>
+          
         </div>
       </div>
     </div>
