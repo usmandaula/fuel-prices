@@ -131,3 +131,34 @@ export interface GasStationsListProps {
   radius?: number;
   onRadiusChange?: (radius: number) => void;
 }
+export interface ListViewLayoutProps {
+  sortedStations: GasStation[];
+  selectedStation: GasStation | null;
+  setSelectedStation: (station: GasStation | null) => void;
+  sortBy: SortOption;
+  sortDirection: SortDirection;
+  setSortBy: (option: SortOption) => void;
+  setSortDirection: (direction: SortDirection) => void;
+  showOnlyOpen: boolean;
+  setShowOnlyOpen: (value: boolean) => void;
+  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
+  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
+  openStationsCount: number;
+  averagePrice: string;
+  bestPrices: {
+    diesel: BestPriceInfo | null;
+    e5: BestPriceInfo | null;
+    e10: BestPriceInfo | null;
+    overall: BestPriceInfo | null;
+  };
+  handleBestPriceClick: (stationId: string, fuelType?: FuelType) => void;
+  isSidebarCollapsed: boolean;
+  toggleSidebar: () => void;
+  isDarkMode: boolean;
+  isLocating: boolean;
+  getUserLocation: () => void;
+  scrollToStation: (stationId: string) => void;
+  radius: number;
+  onRadiusChange: (radius: number) => void;
+  userLocation?: { lat: number; lng: number; name?: string };
+}

@@ -16,6 +16,7 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatPrice, formatDistance, getCheapestFuel } from './utils/formatUtils';
+import { GasStation } from './types/gasStationTypes';
 // Fix leaflet icons
 if (typeof window !== 'undefined') {
   delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -26,27 +27,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-interface GasStation {
-  id: string;
-  name: string;
-  brand: string;
-  street: string;
-  place: string;
-  lat: number;
-  lng: number;
-  dist: number;
-  diesel: number;
-  e5: number;
-  e10: number;
-  isOpen: boolean;
-  houseNumber: string;
-  postCode: number;
-  rating?: number;
-  amenities?: string[];
-  isBestForSelectedFuel?: boolean;
-  isOverallBestPrice?: boolean;
-  minPrice?: number;
-}
 
 interface DetailedMapViewProps {
   stations: GasStation[];
