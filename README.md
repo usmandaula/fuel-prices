@@ -1,5 +1,6 @@
-# FuelFinder
+# FuelFinder ⛽
 A modern web application for discovering nearby gas stations, comparing fuel prices, and viewing detailed maps and lists. Built with Next.js and React, featuring real-time location-based searches and interactive visualizations.
+
 ## 🚀 Features
 
 - **🗺️ Interactive Map View** – Real-time station visualization using Leaflet
