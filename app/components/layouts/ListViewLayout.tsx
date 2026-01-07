@@ -9,39 +9,11 @@ import {
   SortOption, 
   SortDirection,
   FuelType,
-  BestPriceInfo 
-} from '../types/gasStationTypes';
+  BestPriceInfo,
+  ListViewLayoutProps
+} from '../../types/gasStationTypes';
 
-interface ListViewLayoutProps {
-  sortedStations: GasStation[];
-  selectedStation: GasStation | null;
-  setSelectedStation: (station: GasStation | null) => void;
-  sortBy: SortOption;
-  sortDirection: SortDirection;
-  setSortBy: (option: SortOption) => void;
-  setSortDirection: (direction: SortDirection) => void;
-  showOnlyOpen: boolean;
-  setShowOnlyOpen: (value: boolean) => void;
-  priceFilter: 'all' | 'diesel' | 'e5' | 'e10';
-  setPriceFilter: (filter: 'all' | 'diesel' | 'e5' | 'e10') => void;
-  openStationsCount: number;
-  averagePrice: string;
-  bestPrices: {
-    diesel: BestPriceInfo | null;
-    e5: BestPriceInfo | null;
-    e10: BestPriceInfo | null;
-    overall: BestPriceInfo | null;
-  };
-  handleBestPriceClick: (stationId: string, fuelType?: FuelType) => void;
-  isSidebarCollapsed: boolean;
-  toggleSidebar: () => void;
-  isDarkMode: boolean;
-  isLocating: boolean;
-  getUserLocation: () => void;
-  scrollToStation: (stationId: string) => void;
-  radius: number;
-  onRadiusChange: (radius: number) => void;
-}
+
 
 const ListViewLayout: React.FC<ListViewLayoutProps> = ({
   sortedStations,
@@ -66,7 +38,8 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
   getUserLocation,
   scrollToStation,
   radius,
-  onRadiusChange
+  onRadiusChange,
+  userLocation
 }) => {
   return (
     <>
@@ -152,6 +125,7 @@ const ListViewLayout: React.FC<ListViewLayoutProps> = ({
                       isOverallBestPrice={station.isOverallBestPrice || false}
                       selectedFuelType={priceFilter}
                       scrollToStation={scrollToStation}
+                      userLocation={userLocation}
                     />
                   </div>
                 ))}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaSearch, FaTimes, FaLocationArrow, FaMapMarkerAlt } from 'react-icons/fa';
 import axios from 'axios';
+import RecentSearches from './RecentSearches';
 
 interface EnhancedSearchProps {
   onLocationFound: (location: { lat: number; lng: number; name: string }) => void;
@@ -27,6 +28,21 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({ onLocationFound, curren
       setRecentSearches(JSON.parse(saved).slice(0, 5));
     }
   }, []);
+
+  const saveRecentSearch = (location: { lat: number; lng: number; name: string }, searchQuery: string) => {
+    const newSearch: RecentSearch = {
+      ...location,
+      query: searchQuery
+    };
+
+    const updatedRecent = [
+      newSearch,
+      ...recentSearches.filter(s => s.query !== searchQuery)
+    ].slice(0, 5);
+    
+    setRecentSearches(updatedRecent);
+    localStorage.setItem('gasRecentSearches', JSON.stringify(updatedRecent));
+  };
 
   const searchLocation = async (searchQuery: string) => {
     setIsSearching(true);
@@ -56,13 +72,7 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({ onLocationFound, curren
         name: firstResult.display_name
       };
       onLocationFound(location);
-      
-      const updatedRecent = [
-        { ...location, query },
-        ...recentSearches.filter(s => s.query !== query)
-      ].slice(0, 5);
-      setRecentSearches(updatedRecent);
-      localStorage.setItem('gasRecentSearches', JSON.stringify(updatedRecent));
+      saveRecentSearch(location, query);
     }
   };
 
@@ -75,6 +85,23 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({ onLocationFound, curren
     } else {
       setShowSuggestions(false);
     }
+  };
+
+  const handleSuggestionClick = (item: any) => {
+    const location = {
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      name: item.display_name
+    };
+    onLocationFound(location);
+    saveRecentSearch(location, item.display_name);
+    setQuery(item.display_name);
+    setShowSuggestions(false);
+  };
+
+  const handleRecentSearchSelect = (search: RecentSearch) => {
+    onLocationFound(search);
+    saveRecentSearch(search, search.query);
   };
 
   return (
@@ -126,16 +153,7 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({ onLocationFound, curren
             <div 
               key={index}
               className="suggestion-item"
-              onClick={() => {
-                const location = {
-                  lat: parseFloat(item.lat),
-                  lng: parseFloat(item.lon),
-                  name: item.display_name
-                };
-                onLocationFound(location);
-                setQuery(item.display_name);
-                setShowSuggestions(false);
-              }}
+              onClick={() => handleSuggestionClick(item)}
             >
               <FaMapMarkerAlt className="suggestion-icon" />
               <div className="suggestion-content">
@@ -147,26 +165,13 @@ const EnhancedSearch: React.FC<EnhancedSearchProps> = ({ onLocationFound, curren
         </div>
       )}
 
-      {recentSearches.length > 0 && !showSuggestions && query.length === 0 && (
-        <div className="recent-searches">
-          <div className="recent-header">Recent Searches</div>
-          <div className="recent-items">
-            {recentSearches.map((search, index) => (
-              <button
-                key={index}
-                className="recent-item"
-                onClick={() => {
-                  onLocationFound(search);
-                  setQuery(search.query);
-                }}
-              >
-                <FaSearch className="recent-icon" />
-                <span>{search.query}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* {!showSuggestions && query.length === 0 && (
+        <RecentSearches
+          recentSearches={recentSearches}
+          onSelect={handleRecentSearchSelect}
+          onSearchClick={setQuery}
+        />
+      )} */}
     </div>
   );
 };

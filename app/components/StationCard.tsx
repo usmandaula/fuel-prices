@@ -16,7 +16,7 @@ import {
   FaRoute,
   FaChevronRight
 } from 'react-icons/fa';
-import { StationCardProps } from '../types/gasStationTypes';
+import { StationCardProps, GasStation } from '../types/gasStationTypes';
 import { 
   getCheapestFuel, 
   formatAddress, 
@@ -32,7 +32,8 @@ const StationCard: React.FC<StationCardProps> = ({
   isBestForSelectedFuel = false,
   isOverallBestPrice = false,
   selectedFuelType = 'all',
-  scrollToStation
+  scrollToStation,
+  userLocation
 }) => {
   const cheapestFuel = getCheapestFuel(station);
   const isCheapestDiesel = cheapestFuel.type === 'diesel';
@@ -57,6 +58,30 @@ const StationCard: React.FC<StationCardProps> = ({
       default: return <FaHome key={amenity} className="amenity-icon" title={amenity} />;
     }
   };
+  // Opens google maps with user Location and Fuel Station Selected 
+  const handleGetDirections = (e: React.MouseEvent, targetStation: GasStation) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    let url: string;
+    if (userLocation) {
+      url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${targetStation.lat},${targetStation.lng}`;
+    } else {
+      url = `https://www.google.com/maps/dir/?api=1&destination=${targetStation.lat},${targetStation.lng}`;
+    }
+    
+  //  console.log('Opening directions URL:', url);
+    
+    // Create a temporary anchor element and click it
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
 
   return (
     <div 
@@ -125,7 +150,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.diesel)}</div>
+            <div className="price-value">{formatPrice(station.diesel)}</div>
             {selectedFuelType === 'diesel' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -140,7 +165,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.e5)}</div>
+            <div className="price-value">{formatPrice(station.e5)}</div>
             {selectedFuelType === 'e5' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -155,7 +180,7 @@ const StationCard: React.FC<StationCardProps> = ({
                 </span>
               )}
             </div>
-            <div className="price-value">€{formatPrice(station.e10)}</div>
+            <div className="price-value">{formatPrice(station.e10)}</div>
             {selectedFuelType === 'e10' && station.isBestForSelectedFuel && (
               <div className="best-price-indicator">Best Price</div>
             )}
@@ -188,11 +213,11 @@ const StationCard: React.FC<StationCardProps> = ({
           <div className="amenities">
             <div className="amenities-label">Facilities:</div>
             <div className="amenities-list">
-              {station.amenities.slice(0, 3).map((amenity, index) => (
+              {station.amenities.slice(1, 4).map((amenity, index) => (
                 <span key={index} className="amenity-tag">{amenity}</span>
               ))}
-              {station.amenities.length > 3 && (
-                <span className="amenity-more">+{station.amenities.length - 3}</span>
+              {station.amenities.length > 4 && (
+                <span className="amenity-more">+{station.amenities.length - 4 }</span>
               )}
             </div>
             <div className="amenities-icons">
@@ -201,15 +226,18 @@ const StationCard: React.FC<StationCardProps> = ({
           </div>
         )}
 
-        <div className="card-actions">
-          <button className="action-btn directions">
+        <div className="card-actions" >
+         
+          <button className="action-btn directions" onClick={(e) => {
+          console.log(e)
+                        e.stopPropagation();
+                        handleGetDirections(e,station);
+                      }}  >
             <FaRoute />
             Directions
+            
           </button>
-          <button className="action-btn details">
-            <FaChevronRight />
-            Details
-          </button>
+          
         </div>
       </div>
     </div>

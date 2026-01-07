@@ -20,13 +20,13 @@ const GasStationsList: React.FC<GasStationsListProps> = ({
 }) => {
   // STATE DECLARATIONS
 
- const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+ //const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
 
-  // const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
-  //   'fuelFinder_viewMode', 
-  //   'map',
+   const [viewMode, setViewMode] = usePersistentState<'list' | 'map'>(
+     'fuelFinder_viewMode', 
+     'map',
    
-  // );
+   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   
@@ -152,6 +152,7 @@ useEffect(() => {
             isLocating={isLocating}
             getUserLocation={getUserLocation}
             scrollToStation={scrollToStation}
+             userLocation={userLocation}
           />
         )}
       </main>
