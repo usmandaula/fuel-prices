@@ -122,7 +122,15 @@ app/
 - **Best Price Highlights** – Quickly identify cheapest options
 - **Directions** – Open navigation in Google Maps
 
+## 📸 Application Screenshots
 
+### 🌍 **Map View - Default Interface**
+![Map View](./screenshots/mapview.png)
+*Interactive map showing gas stations with custom markers, user location, and price heatmap visualization*
+
+### 📊 **List View Layouts**
+![List View](./screenshots/listview.png)
+*Sortable table format with price comparisons and percentage differences*
 
 ## 🔑 Key Components
 
